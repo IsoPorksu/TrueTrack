@@ -1,4 +1,4 @@
-# TrueTrack, 23.10  build
+# TrueTrack
 
 import json, threading, time, paho.mqtt.client as mqtt
 from os import system
