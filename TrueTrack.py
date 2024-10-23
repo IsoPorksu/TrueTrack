@@ -5,6 +5,7 @@ from os import system
 from math import *
 from datetime import datetime
 import platform
+from varname import nameof
 
 start_time = datetime.now()
 vehicles = {}
