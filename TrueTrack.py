@@ -1,4 +1,4 @@
-# TrueTrack v1
+# TrueTrack v3
 
 import json, threading, time, paho.mqtt.client as mqtt
 from os import system
@@ -31,8 +31,8 @@ def debug(*args):
         print(f"{nameof(arg)}: {arg}", end="")
         
 def check_friends(filtered_vehicles):
-    for vehicle_number, [current, next, eta, track, dest] in filtered_vehicles.items():
-        for other_vehicle_number, [other_current, other_next, other_eta, other_track, other_dest] in filtered_vehicles.items():
+    for vehicle_number, [current, next, eta, track, dest, speed] in filtered_vehicles.items():
+        for other_vehicle_number, [other_current, other_next, other_eta, other_track, other_dest, other_speed] in filtered_vehicles.items():
             if other_vehicle_number != vehicle_number:
                 if track == other_track:
                     if current == other_current or (current == other_next and next == "") or (next == other_current and other_next == ""):
@@ -40,9 +40,9 @@ def check_friends(filtered_vehicles):
                         eta = 0 if eta == "" else int(eta)
                         other_eta = 0 if other_eta == "" else int(other_eta)
                         if eta < other_eta:
-                            vehicles[other_vehicle_number] = current, next, eta, track, dest
+                            vehicles[other_vehicle_number] = current, next, eta, track, dest, speed
                         else:
-                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest 
+                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed
 
 def sync_friends():
     filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 200}
@@ -58,22 +58,16 @@ def eta_maker(pos):
         eta = ""
     return str(eta)
 
-def print_maker(vehicle_number, station, next, eta, destination):
-    eta = 0 if eta == "" else eta
-    eta = int(eta)-1
-    eta = str(eta)
-    if eta == "0":
-        eta = ""
-    eta_print = "~" + eta
+def print_maker(car, station, next, eta, destination, speed):
     if next != "" and eta != "":
-        print(f" {vehicle_number:<4}| {station:>4} -> {next:<4} {eta_print:>4}s | {destination}")
+        print(f" {car:<4}| {station:>4} -> {next:<4} {eta:>4}s | {destination:<11} | {car:<4}| {speed:>2}km/h")
     elif next != "":
-        print(f" {vehicle_number:<3} | {station:>4} -> {next:<4}     | {destination}")
+        print(f" {car:<4}| {station:>4} -> {next:<4}     | {destination:<11} | {car:<4}|")
     else:
-        print(f" {vehicle_number:<3} | {station:>4}               | {destination}")
+        print(f" {car:<4}| {station:>4}               | {destination:<11} | {car:<4}|")
     
     track = station[-1] if station.endswith("1") or station.endswith("2") else ""
-    vehicles[vehicle_number] = station, next, eta, track, destination 
+    vehicles[car] = station, next, eta, track, destination, speed
 
 def print_vehicle_table():
     sync_friends()
@@ -85,22 +79,27 @@ def print_vehicle_table():
     runtime = datetime.now() - start_time
     runtime_seconds = int(runtime.total_seconds())
     print(f" Runtime {runtime_seconds}s")
-    print(" Car |  Now -> Next   ETA | Destination")
-    print(" ----|--------------------|------------")
+    print(" Car |  Now -> Next   ETA | Destination | Car | Speed")
+    print(" ----|--------------------|-------------|-----|-------")
 
     global vs, mm, tap, kil
     vs = mm = tap = kil = 0
     
     
-    for vehicle_number, vehicle_info in sorted_vehicles.items():
-        station, next, eta, track, destination = vehicle_info
-        print_maker(vehicle_number, station, next, eta, destination)
+    for vehicle_number, [station, next, eta, track, destination, speed] in sorted_vehicles.items():
+        eta = 0 if eta == "" else eta
+        eta = int(eta)-1
+        eta = str(eta)
+        if eta == "0":
+            eta = ""
+        eta_print = "~" + eta
+        print_maker(vehicle_number, station, next, eta, destination, speed )
 
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
         if destination in ["VS", "  MM", "    TAP", "       KIL"]:
             globals()[{'VS': 'vs', '  MM': 'mm', '    TAP': 'tap', '       KIL': 'kil'}[destination]] += stock
 
-    print(" ----|--------------------|------------")
+    print(" ----|--------------------|-------------|-----|-------")
     total = ceil(vs + mm + tap + kil)
     o = float(mm+tap) 
     p = float(vs+kil) 
@@ -108,7 +107,7 @@ def print_vehicle_table():
     p = str(ceil(p)) if p.is_integer() else str(p) 
     m2_count = o + "xM2"
     m1_count = p + "xM1"
-    print(f" {total:<4}| {m1_count:<7}    {m2_count:>7} |{ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2}")
+    print(f" {total:<4}| {m1_count:<7}    {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2} |     |")
 
 def update_vehicle_table():
     while True:
@@ -121,6 +120,8 @@ def on_message(client, userdata, message):
     latitude = data.get('VP', {}).get('lat', 'Unknown')
     longitude = data.get('VP', {}).get('long', 'Unknown')
     line = data.get('VP', {}).get('desi', 'Unknown')
+    speed = data.get('VP', {}).get('spd', 62.5)
+    speed = str(ceil(speed*3.6))
 
     if (latitude, longitude) in coordinates:
         current, next, track, pos = coordinates[(latitude, longitude)]
@@ -131,17 +132,20 @@ def on_message(client, userdata, message):
         if current == "Pre-IK":
             current = "PT" if line == "M1" else "MP" if line == "M2" else ""
 
-        if not current in ["KILK", "TAPG", "MV", "VSG", "MMG", ""]:
+        if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             current = current + track
-        if not next in ["KILK", "TAPG", "MV", "VSG", "MMG", ""]:
+        if not next in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             next = next + track
 
         if len(current) == 2:
             current = " " + current
+            
+        if next == "":
+            speed = 0
 
-        vehicles[vehicle_number] = current, next, eta, track, destination
+        vehicles[vehicle_number] = current, next, eta, track, destination, speed
         if vehicle_number == 203:
-            vehicles[219] = current, next, eta, track, destination
+            vehicles[219] = current, next, eta, track, destination, speed
 
 
 # Set up MQTT client
