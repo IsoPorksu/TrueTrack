@@ -1,4 +1,4 @@
-# TrueTrack
+# TrueTrack v1
 
 import json, threading, time, paho.mqtt.client as mqtt
 from os import system
@@ -29,21 +29,26 @@ destinations = {
 def debug(*args):
     for arg in args:
         print(f"{nameof(arg)}: {arg}", end="")
-
-def sync_friends():
-    filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 300}
+        
+def check_friends(filtered_vehicles):
     for vehicle_number, [current, next, eta, track, dest] in filtered_vehicles.items():
         for other_vehicle_number, [other_current, other_next, other_eta, other_track, other_dest] in filtered_vehicles.items():
             if other_vehicle_number != vehicle_number:
                 if track == other_track:
-                    if current == other_current or current == other_next or next == other_current:
+                    if current == other_current or (current == other_next and next == "") or (next == other_current and other_next == ""):
                         first = None
                         eta = 0 if eta == "" else int(eta)
                         other_eta = 0 if other_eta == "" else int(other_eta)
                         if eta < other_eta:
                             vehicles[other_vehicle_number] = current, next, eta, track, dest
                         else:
-                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest
+                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest 
+
+def sync_friends():
+    filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 200}
+    check_friends(filtered_vehicles)
+    filtered_vehicles = {k: v for k, v in vehicles.items() if 200 < int(k) < 300}
+    check_friends(filtered_vehicles) 
 
 def eta_maker(pos):
     try:
