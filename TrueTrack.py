@@ -111,7 +111,6 @@ def print_vehicle_table():
     m2_count = o + "xM2"
     m1_count = p + "xM1"
     print(f" {total:<4}| {m1_count:<7}    {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2} |     |")
-    print(f" {total:<4}| {m1_count:<7}    {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2} |     |")
 
 def update_vehicle_table():
     while True:
@@ -126,8 +125,6 @@ def on_message(message):
     line = data.get('VP', {}).get('desi', 'Unknown')
     speed = data.get('VP', {}).get('spd', 62.5)
     speed = str(ceil(speed*3.6))
-    speed = data.get('VP', {}).get('spd', 62.5)
-    speed = str(ceil(speed*3.6))
 
     if (latitude, longitude) in coordinates:
         current, next, track, pos = coordinates[(latitude, longitude)]
@@ -139,9 +136,7 @@ def on_message(message):
             current = "PT" if line == "M1" else "MP" if line == "M2" else ""
 
         if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
-        if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             current = current + track
-        if not next in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
         if not next in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             next = next + track
 
