@@ -1,4 +1,4 @@
-# TrueTrack v4
+# TrueTrack v5
 
 import json, threading, time, paho.mqtt.client as mqtt
 from os import system
@@ -89,8 +89,8 @@ def print_vehicle_table():
     global vs, mm, tap, kil
     vs = mm = tap = kil = 0
     
-    
-    for car, [station, next, track, destination, speed] in sorted_vehicles.items and car, [last_eta, eta] in etas.items:
+    for car, [station, next, track, destination, speed] in sorted_vehicles.items:
+        etas[car][1] =  eta
         eta = 0 if eta == "" else eta
         eta = int(eta)-1
         eta = str(eta)
@@ -117,7 +117,7 @@ def update_vehicle_table():
         print_vehicle_table()
         time.sleep(1)
 
-def on_message(message):
+def on_message(ur, mom, message):
     data = json.loads(message.payload.decode())
     car = data.get('VP', {}).get('veh', 'Unknown')
     latitude = data.get('VP', {}).get('lat', 'Unknown')
