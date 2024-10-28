@@ -125,14 +125,16 @@ def on_message(client, userdata, message):
 
     if (latitude, longitude) in coordinates:
         current, next, track, pos = coordinates[(latitude, longitude)]
-        eta = eta_maker(pos)
-        dest_key = (line, int(track))
-        destination = destinations.get(dest_key, "")
-
         if current == "Pre-IK":
             current = "PT" if line == "M1" else "MP" if line == "M2" else ""
         elif next == "Post-IK":
             next = "PT" if line == "M1" else "MP" if line == "M2" else ""
+            pos = "76" if line == "M1" else "132" if line == "M2" else ""
+        eta = eta_maker(pos)
+        dest_key = (line, int(track))
+        destination = destinations.get(dest_key, "")
+
+
 
         if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             current = current + track
