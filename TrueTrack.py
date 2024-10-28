@@ -131,6 +131,8 @@ def on_message(client, userdata, message):
 
         if current == "Pre-IK":
             current = "PT" if line == "M1" else "MP" if line == "M2" else ""
+        elif next == "Post-IK":
+            next = "PT" if line == "M1" else "MP" if line == "M2" else ""
 
         if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             current = current + track

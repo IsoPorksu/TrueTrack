@@ -5,18 +5,15 @@ broker = "mqtt.hsl.fi"
 port = 1883
 topic = "/hfp/v2/journey/ongoing/vp/metro/#"
 coordinates = []
-#car = int(input())
 
 def on_message(client, userdata, message):
     data = json.loads(message.payload.decode())
     
     vehicle_id = data.get('VP', {}).get('veh', 'Unknown')
-    if vehicle_id == 309:
+    if vehicle_id == 317:
         latitude = data.get('VP', {}).get('lat', 'Unknown')
         longitude = data.get('VP', {}).get('long', 'Unknown')
         #heading = data.get('VP', {}). get('hdg', 'Unknown')
-        lat = float(latitude)
-        long = float(longitude)
 
         print (f"({latitude}, {longitude})")
         newCoordinate = [latitude, longitude]
@@ -25,7 +22,7 @@ def on_message(client, userdata, message):
     
     # Writing to metro_coords.json
     formatString = "  [[{lat},{long}], [\"\",\"\",\"2\",\"\"]],\n"
-    with open("metro_coords_ht-kil2.json", "w") as outfile:
+    with open("metro_coords_vskilk2.json", "w") as outfile:
         outfile.write("[\n")
         for coordinate in coordinates:
             outfile.write(str.format(formatString, lat=coordinate[0], long=coordinate[1]))
