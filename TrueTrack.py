@@ -95,7 +95,8 @@ def print_vehicle_table():
         system('clear')
     runtime = datetime.now() - start_time
     runtime_seconds = int(runtime.total_seconds())
-    print(f" Runtime {runtime_seconds}s")
+    now = datetime.now()
+    print(f" Runtime {runtime_seconds}s  Time: {now.strftime('%H:%M:%S')}")
     print(" Car |  Now -> Next   ETA | Destination |Car 2| Speed")
     print(" ----|--------------------|-------------|-----|-------")
     global vs, mm, tap, kil
@@ -169,8 +170,8 @@ def on_message(client, userdata, message):
             speed = 0
         if int(speed) < 15 and int(speed) != 0:
             speed = 15
-        if int(speed) > 80:
-            speed = 80
+        if int(speed) > 81:
+            speed = 81
         vehicles[vehicle_number] = current, next, eta, track, destination, speed
         if vehicle_number == 203:
             vehicles[219] = current, next, eta, track, destination, speed
