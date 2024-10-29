@@ -1,5 +1,4 @@
-# TrueTrack v3
-
+# TrueTrack v5
 import json, threading, time, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -9,6 +8,7 @@ from varname import nameof
 
 start_time = datetime.now()
 vehicles = {}
+friends = {}
 broker = "mqtt.hsl.fi"
 port = 1883
 topic = "/hfp/v2/journey/ongoing/vp/metro/#"
@@ -24,7 +24,6 @@ destinations = {
 }
 
 ##############################################
-##############################################
 
 def debug(*args):
     for arg in args:
@@ -36,13 +35,16 @@ def check_friends(filtered_vehicles):
             if other_vehicle_number != vehicle_number:
                 if track == other_track:
                     if current == other_current or (current == other_next and next == "") or (next == other_current and other_next == ""):
-                        first = None
                         eta = 0 if eta == "" else int(eta)
                         other_eta = 0 if other_eta == "" else int(other_eta)
                         if eta < other_eta:
                             vehicles[other_vehicle_number] = current, next, eta, track, dest, speed
+                            friends[other_vehicle_number] = vehicle_number
+                            friends[vehicle_number] = other_vehicle_number
                         else:
                             vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed
+                            friends[other_vehicle_number] = vehicle_number
+                            friends[vehicle_number] = other_vehicle_number
 
 def sync_friends():
     filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 200}
@@ -60,12 +62,21 @@ def eta_maker(pos):
 
 def print_maker(car, station, next, eta, destination, speed):
     if next != "" and eta != "":
-        print(f" {car:<4}| {station:>4} -> {next:<4} {eta:>4}s | {destination:<11} | {car:<4}| {speed:>2}km/h")
+        print(f" {car:<4}| {station:>4} -> {next:<4} {eta:>4}s | {destination:<11} |", end = "")
     elif next != "":
-        print(f" {car:<4}| {station:>4} -> {next:<4}     | {destination:<11} | {car:<4}|")
+        print(f" {car:<4}| {station:>4} -> {next:<4}     | {destination:<11} |", end = "")
     else:
-        print(f" {car:<4}| {station:>4}               | {destination:<11} | {car:<4}|")
-    
+        print(f" {car:<4}| {station:>4}               | {destination:<11} |", end = "")
+    if car in friends:
+        friend = friends[car]
+        if speed != 0:
+            print(f" {friend:<4}| {speed:>2}km/h")
+        else:
+            print(f" {friend:<4}|")
+    elif speed != 0:
+        print(f"     | {speed:>2}km/h")
+    else:
+        print(f"     |")
     track = station[-1] if station.endswith("1") or station.endswith("2") else ""
     vehicles[car] = station, next, eta, track, destination, speed
 
@@ -79,12 +90,10 @@ def print_vehicle_table():
     runtime = datetime.now() - start_time
     runtime_seconds = int(runtime.total_seconds())
     print(f" Runtime {runtime_seconds}s")
-    print(" Car |  Now -> Next   ETA | Destination | Car | Speed")
+    print(" Car |  Now -> Next   ETA | Destination |Car 2| Speed")
     print(" ----|--------------------|-------------|-----|-------")
-
     global vs, mm, tap, kil
     vs = mm = tap = kil = 0
-    
     
     for vehicle_number, [station, next, eta, track, destination, speed] in sorted_vehicles.items():
         eta = 0 if eta == "" else eta
@@ -94,7 +103,6 @@ def print_vehicle_table():
             eta = ""
         eta_print = "~" + eta
         print_maker(vehicle_number, station, next, eta, destination, speed )
-
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
         if destination in ["VS", "  MM", "    TAP", "       KIL"]:
             globals()[{'VS': 'vs', '  MM': 'mm', '    TAP': 'tap', '       KIL': 'kil'}[destination]] += stock
@@ -122,9 +130,6 @@ def on_message(client, userdata, message):
     line = data.get('VP', {}).get('desi', 'Unknown')
     speed = data.get('VP', {}).get('spd', 62.5)
     speed = str(ceil(speed*3.6))
-    if int(speed) < 15:
-        speed = "15"
-
     if (latitude, longitude) in coordinates:
         current, next, track, pos = coordinates[(latitude, longitude)]
         if current == "Pre-IK":
@@ -135,7 +140,6 @@ def on_message(client, userdata, message):
         eta = eta_maker(pos)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
-
         if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             current = current + track
         if not next in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
@@ -144,12 +148,13 @@ def on_message(client, userdata, message):
             current = " " + current           
         if next == "":
             speed = 0
+        if int(speed) < 15 and int(speed) != 0:
+            speed = 15
         vehicles[vehicle_number] = current, next, eta, track, destination, speed
         if vehicle_number == 203:
             vehicles[219] = current, next, eta, track, destination, speed
 
 
-# Set up MQTT client
 client = mqtt.Client()
 client.on_message = on_message
 client.connect(broker, port)
