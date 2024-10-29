@@ -69,11 +69,11 @@ def print_maker(car, station, next, eta, destination, speed):
         print(f" {car:<4}| {station:>4}               | {destination:<11} |", end = "")
     if car in friends:
         friend = friends[car]
-        if speed != 0:
+        if speed != 0 and speed != "0":
             print(f" {friend:<4}| {speed:>2}km/h")
         else:
             print(f" {friend:<4}|")
-    elif speed != 0:
+    elif speed != 0 and speed != "0":
         print(f"     | {speed:>2}km/h")
     else:
         print(f"     |")
@@ -150,6 +150,8 @@ def on_message(client, userdata, message):
             speed = 0
         if int(speed) < 15 and int(speed) != 0:
             speed = 15
+        if int(speed) > 80:
+            speed = 80
         vehicles[vehicle_number] = current, next, eta, track, destination, speed
         if vehicle_number == 203:
             vehicles[219] = current, next, eta, track, destination, speed
