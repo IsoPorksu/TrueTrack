@@ -23,6 +23,8 @@ destinations = {
     ("M2", 2): "    TAP",
 }
 
+m2as = [("04:57", 0), ("05:00", 5), ("05:15", 5), ("05:30", 5), ("05:45", 5), ("06:00", 5), ("06:15", 5), ("06:30", 5), ("06:45", 5), ("07:00", 5), ("07:15", 5), ("07:30", 5), ("07:45", 5), ("08:00", 5), ("06:00", 6), ("20:15", 6), ("20:30", 6), ("20:45", 6)]
+
 ##############################################
 
 def debug(*args):
@@ -65,26 +67,25 @@ def findDayNumber(day):
     day_of_week = date_obj.isoweekday()
     if day_of_week in range (0,4):
         day_of_week = 0
+    return day_of_week
 
 def print_maker(car, station, next, eta, destination, speed):
-    if next != "" and eta != "":
-        print(f" {car:<4}| {station:>4} -> {next:<4} {eta:>4}s | {destination:<11} |", end = "")
-    elif next != "":
-        print(f" {car:<4}| {station:>4} -> {next:<4}     | {destination:<11} |", end = "")
+    if next and eta:
+        print(f" {car:<4}| {station:>4} -> {next:<4} {eta:>4}s | {destination:<11} |", end="")
+    elif next:
+        print(f" {car:<4}| {station:>4} -> {next:<4}     | {destination:<11} |", end="")
     else:
-        print(f" {car:<4}| {station:>4}               | {destination:<11} |", end = "")
-    if car in friends:
-        friend = friends[car]
-        if speed != 0 and speed != "0":
-            print(f" {friend:<4}| {speed:>2}km/h")
-        else:
-            print(f" {friend:<4}|")
-    elif speed != 0 and speed != "0":
-        print(f"     | {speed:>2}km/h")
+        print(f" {car:<4}| {station:>4}               | {destination:<11} |", end="")
+    
+    friend = friends.get(car, "")
+    if speed not in ["0", 0]:
+        print(f" {friend:<4}| {speed:>2}km/h" if friend else f"     | {speed:>2}km/h")
     else:
-        print(f"     |")
-    track = station[-1] if station.endswith("1") or station.endswith("2") else ""
+        print(f" {friend:<4}|" if friend else "     |")
+    
+    track = station[-1] if station.endswith(("1", "2")) else ""
     vehicles[car] = station, next, eta, track, destination, speed
+
 
 def print_vehicle_table():
     sync_friends()
@@ -104,11 +105,9 @@ def print_vehicle_table():
     
     for vehicle_number, [station, next, eta, track, destination, speed] in sorted_vehicles.items():
         eta = 0 if eta == "" else eta
-        #eta = int(eta)-1
         eta = str(eta)
         if eta == "0":
             eta = ""
-        eta_print = "~" + eta
         print_maker(vehicle_number, station, next, eta, destination, speed )
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
         if destination in ["VS", "  MM", "    TAP", "       KIL"]:
@@ -118,10 +117,8 @@ def print_vehicle_table():
     total = ceil(vs + mm + tap + kil)
     o = float(mm+tap) 
     p = float(vs+kil) 
-    o = str(ceil(o)) if o.is_integer() else str(o)
-    p = str(ceil(p)) if p.is_integer() else str(p) 
-    m2_count = o + "xM2"
-    m1_count = p + "xM1"
+    m2_count = str(ceil(o)) if o.is_integer() else str(o) + "xM2"
+    m1_count = str(ceil(p)) if p.is_integer() else str(p) + "xM1"
     print(f" {total:<4}| {m1_count:<7}    {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2} |     |")
 
 def update_vehicle_table():
@@ -131,50 +128,34 @@ def update_vehicle_table():
 
 def on_message(client, userdata, message):
     data = json.loads(message.payload.decode())
-    vehicle_number = data.get('VP', {}).get('veh', 'Unknown')
-    latitude = data.get('VP', {}).get('lat', 'Unknown')
-    longitude = data.get('VP', {}).get('long', 'Unknown')
-    line = data.get('VP', {}).get('desi', 'Unknown')
-    day = data.get('VP', {}).get('oday', 'Unknown')
-    dep = data.get('VP', {}).get('start', 'Unknown')
-    findDayNumber(day)
-    
-    speed = data.get('VP', {}).get('spd', 62.5)
-    speed = str(ceil(speed*3.6))
+    vehicle_number = data.get('VP', {}).get('veh')
+    latitude, longitude = data.get('VP', {}).get('lat'), data.get('VP', {}).get('long')
+    line, day, dep = data.get('VP', {}).get('desi'), data.get('VP', {}).get('oday'), data.get('VP', {}).get('start')
+    speed = str(ceil(data.get('VP', {}).get('spd', 62.5) * 3.6))
+
     if (latitude, longitude) in coordinates:
         current, next, track, pos = coordinates[(latitude, longitude)]
-        if current == "Pre-IK":
-            current = "PT" if line == "M1" else "MP" if line == "M2" else ""
-        elif next == "Post-IK":
-            next = "PT" if line == "M1" else "MP" if line == "M2" else ""
-            pos = "76" if line == "M1" else "132" if line == "M2" else ""
-        elif next == "Post-TAPx1":
-            next = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
-            pos = "84" if line == "M1" else "64" if line == "M2" else ""
-        elif next == "Post-TAPx2":
-            next = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
-            pos = "79" if line == "M1" else "58" if line == "M2" else ""
-        elif current == "Pre-TAP":
-            current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
-                                        
+        if current == "Pre-IK": current = "PT" if line == "M1" else "MP" if line == "M2" else ""
+        elif next == "Post-IK": next, pos = ("PT" if line == "M1" else "MP" if line == "M2" else "", "76" if line == "M1" else "132" if line == "M2" else "")
+        elif next == "Post-TAPx1": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "84" if line == "M1" else "64" if line == "M2" else "")
+        elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
+        elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
+
         eta = eta_maker(pos)
+        day = findDayNumber(day)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
-        if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
-            current = current + track
-        if not next in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
-            next = next + track
-        if len(current) == 2:
-            current = " " + current           
-        if next == "":
-            speed = 0
-        if int(speed) < 15 and int(speed) != 0:
-            speed = 15
-        if int(speed) > 81:
-            speed = 81
+        if datetime.strptime(dep, "%H:%M") > datetime.strptime("21:00", "%H:%M"):
+            if destination == "    TAP":
+                destination = "       KIL"
+        elif (dep, day) in m2as and destination == "    TAP":
+            destination = "       KIL"
+        if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
+        if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
+        if len(current) == 2: current = " " + current
+        speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
         vehicles[vehicle_number] = current, next, eta, track, destination, speed
-        if vehicle_number == 203:
-            vehicles[219] = current, next, eta, track, destination, speed
+        if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed
 
 
 client = mqtt.Client()
