@@ -122,6 +122,8 @@ def on_message(client, userdata, message):
     line = data.get('VP', {}).get('desi', 'Unknown')
     speed = data.get('VP', {}).get('spd', 62.5)
     speed = str(ceil(speed*3.6))
+    if int(speed) < 15:
+        speed = "15"
 
     if (latitude, longitude) in coordinates:
         current, next, track, pos = coordinates[(latitude, longitude)]
@@ -134,19 +136,14 @@ def on_message(client, userdata, message):
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
 
-
-
         if not current in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             current = current + track
         if not next in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]:
             next = next + track
-
         if len(current) == 2:
-            current = " " + current
-            
+            current = " " + current           
         if next == "":
             speed = 0
-
         vehicles[vehicle_number] = current, next, eta, track, destination, speed
         if vehicle_number == 203:
             vehicles[219] = current, next, eta, track, destination, speed
