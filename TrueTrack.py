@@ -59,6 +59,12 @@ def eta_maker(pos):
     except ValueError:
         eta = ""
     return str(eta)
+    
+def findDayNumber(day):
+    date_obj = datetime.strptime(day, "%Y-%m-%d")
+    day_of_week = date_obj.isoweekday()
+    if day_of_week in range (0,4):
+        day_of_week = 0
 
 def print_maker(car, station, next, eta, destination, speed):
     if next != "" and eta != "":
@@ -128,6 +134,10 @@ def on_message(client, userdata, message):
     latitude = data.get('VP', {}).get('lat', 'Unknown')
     longitude = data.get('VP', {}).get('long', 'Unknown')
     line = data.get('VP', {}).get('desi', 'Unknown')
+    day = data.get('VP', {}).get('oday', 'Unknown')
+    dep = data.get('VP', {}).get('start', 'Unknown')
+    findDayNumber(day)
+    
     speed = data.get('VP', {}).get('spd', 62.5)
     speed = str(ceil(speed*3.6))
     if (latitude, longitude) in coordinates:
