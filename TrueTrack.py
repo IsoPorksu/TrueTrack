@@ -103,7 +103,7 @@ def print_vehicle_table():
     
     for vehicle_number, [station, next, eta, track, destination, speed] in sorted_vehicles.items():
         eta = 0 if eta == "" else eta
-        eta = int(eta)-1
+        #eta = int(eta)-1
         eta = str(eta)
         if eta == "0":
             eta = ""
@@ -147,6 +147,15 @@ def on_message(client, userdata, message):
         elif next == "Post-IK":
             next = "PT" if line == "M1" else "MP" if line == "M2" else ""
             pos = "76" if line == "M1" else "132" if line == "M2" else ""
+        elif next == "Post-TAPx1":
+            next = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
+            pos = "84" if line == "M1" else "64" if line == "M2" else ""
+        elif next == "Post-TAPx2":
+            next = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
+            pos = "79" if line == "M1" else "58" if line == "M2" else ""
+        elif current == "Pre-TAP":
+            current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
+                                        
         eta = eta_maker(pos)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
