@@ -6,6 +6,8 @@ from datetime import datetime
 import platform
 from varname import nameof
 
+global last_message
+last_message = 0
 start_time = datetime.now()
 vehicles = {}
 friends = {}
@@ -97,7 +99,9 @@ def print_vehicle_table():
     runtime = datetime.now() - start_time
     runtime_seconds = int(runtime.total_seconds())
     now = datetime.now()
-    print(f" Runtime {runtime_seconds}s  Time: {now.strftime('%H:%M:%S')}")
+    moment = int(time.time())
+    delta = moment - last_message
+    print(f" Runtime {runtime_seconds}+{delta}s  Time: {now.strftime('%H:%M:%S')}")
     print(" Car |  Now -> Next   ETA | Destination |Car 2| Speed")
     print(" ----|--------------------|-------------|-----|-------")
     global vs, mm, tap, kil
@@ -127,6 +131,8 @@ def update_vehicle_table():
         time.sleep(1)
 
 def on_message(client, userdata, message):
+    global last_message
+    last_message = int(time.time())
     data = json.loads(message.payload.decode())
     vehicle_number = data.get('VP', {}).get('veh')
     latitude, longitude = data.get('VP', {}).get('lat'), data.get('VP', {}).get('long')
