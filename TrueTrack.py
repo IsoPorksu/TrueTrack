@@ -1,13 +1,13 @@
-# TrueTrack v5
+# TrueTrack v7
 import json, threading, time, paho.mqtt.client as mqtt
 from os import system
 from math import *
-from datetime import datetime
+from datetime import datetime, timezone
 import platform
 from varname import nameof
 
 global last_message
-last_message = 0
+last_message = time.time()
 start_time = datetime.now()
 vehicles = {}
 friends = {}
@@ -97,15 +97,15 @@ def print_vehicle_table():
     if platform.system() == "Linux":
         system('clear')
     runtime = datetime.now() - start_time
-    runtime_seconds = int(runtime.total_seconds())
-    now = datetime.now()
-    moment = int(time.time())
-    delta = moment - last_message
-    print(f" Runtime {runtime_seconds}+{delta}s  Time: {now.strftime('%H:%M:%S')}")
+    runtime_seconds = str(int(runtime.total_seconds())) + "s"
+    now = datetime.now(timezone.utc)
+    moment = time.time()
+    ping = str(ceil((moment - last_message)*1000)) + "ms"
+    print(f" Runtime: {runtime_seconds}  Ping: {ping}  Time: {now.strftime('%H:%M:%S')}Z")
     print(" Car |  Now -> Next   ETA | Destination |Car 2| Speed")
     print(" ----|--------------------|-------------|-----|-------")
-    global vs, mm, tap, kil
-    vs = mm = tap = kil = 0
+    global vs, mm, tap, kil, m100_count, m200_count, m300_count, o300_count
+    vs = mm = tap = kil = m100_count = m200_count = m300_count = o300_count = 0
     
     for vehicle_number, [station, next, eta, track, destination, speed] in sorted_vehicles.items():
         eta = 0 if eta == "" else eta
@@ -114,16 +114,27 @@ def print_vehicle_table():
             eta = ""
         print_maker(vehicle_number, station, next, eta, destination, speed )
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
+
+        if vehicle_number < 200:
+            m100_count += 0.5
+        elif 201 <= vehicle_number <= 223:
+            m200_count += 0.5
+        elif 301 <= vehicle_number <= 320:
+            m300_count += 1
+        elif 321 <= vehicle_number <= 325:
+            o300_count += 1
+
         if destination in ["VS", "  MM", "    TAP", "       KIL"]:
             globals()[{'VS': 'vs', '  MM': 'mm', '    TAP': 'tap', '       KIL': 'kil'}[destination]] += stock
 
     print(" ----|--------------------|-------------|-----|-------")
     total = ceil(vs + mm + tap + kil)
-    o = float(mm+tap) 
-    p = float(vs+kil) 
-    m2_count = str(ceil(o)) if o.is_integer() else str(o) + "xM2"
-    m1_count = str(ceil(p)) if p.is_integer() else str(p) + "xM1"
+    o = float(mm+tap)
+    p = float(vs+kil)
+    m2_count = str(ceil(o)) + "xM2" if o.is_integer() else str(o) + "xM2"
+    m1_count = str(ceil(p)) + "xM1" if p.is_integer() else str(p) + "xM1"
     print(f" {total:<4}| {m1_count:<7}    {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2} |     |")
+    print(f" {ceil(m100_count)}xM100, {ceil(m200_count)}xM200, {ceil(m300_count)}xM300, {ceil(o300_count)}xO300")
 
 def update_vehicle_table():
     while True:
@@ -132,7 +143,7 @@ def update_vehicle_table():
 
 def on_message(client, userdata, message):
     global last_message
-    last_message = int(time.time())
+    last_message = time.time()
     data = json.loads(message.payload.decode())
     vehicle_number = data.get('VP', {}).get('veh')
     latitude, longitude = data.get('VP', {}).get('lat'), data.get('VP', {}).get('long')
@@ -151,14 +162,14 @@ def on_message(client, userdata, message):
         day = findDayNumber(day)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
-        """if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:19", "%H:%M"):
+        if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:19", "%H:%M"):
             if destination == "    TAP":
                 print(vehicle_number)
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
             print(vehicle_number)
             destination = "       KIL"
-        """
+        
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
         if len(current) == 2: current = " " + current
