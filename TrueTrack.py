@@ -1,10 +1,9 @@
-# TrueTrack v7
+# TrueTrack v8
 import json, threading, time, platform, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime
 from pytz import timezone
-from varname import nameof
 
 global last_message
 last_message = time.time()
@@ -18,6 +17,7 @@ distance = 0
 with open('metro_coords.json', 'r') as file:
     coords = json.load(file)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
+m2as = [("04:57", 0), ("04:49", 5), ("05:04", 5), ("05:19", 5), ("05:34", 5), ("05:46", 5), ("06:01", 5), ("05:33", 5), ("05:48", 5), ("06:03", 5), ("06:18", 5), ("06:33", 5), ("06:48", 5), ("07:03", 5), ("05:49", 6), ("20:15", 6), ("20:30", 6), ("20:45", 6)] # A list of all services on line M1 7
 destinations = {
     ("M1", 1): "VS",
     ("M1", 2): "       KIL",
@@ -25,13 +25,7 @@ destinations = {
     ("M2", 2): "    TAP",
 }
 
-m2as = [("04:57", 0), ("04:49", 5), ("05:04", 5), ("05:19", 5), ("05:34", 5), ("05:46", 5), ("06:01", 5), ("05:33", 5), ("05:48", 5), ("06:03", 5), ("06:18", 5), ("06:33", 5), ("06:48", 5), ("07:03", 5), ("05:49", 6), ("20:15", 6), ("20:30", 6), ("20:45", 6)]
-
 ##############################################
-
-def debug(*args):
-    for arg in args:
-        print(f"{nameof(arg)}: {arg}", end="")
         
 def check_friends(filtered_vehicles):
     for vehicle_number, [current, next, eta, track, dest, speed] in filtered_vehicles.items():
