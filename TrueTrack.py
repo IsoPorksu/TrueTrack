@@ -78,7 +78,7 @@ def print_maker(car, station, next, eta, destination, speed):
         print(f" {car:<4}| {station:>4}               | {destination:<11} |", end="")
     
     friend = friends.get(car, "")
-    if speed not in ["0", 0]:
+    if speed not in ["0", 0] and next:
         print(f" {friend:<4}| {speed:>2}km/h" if friend else f"     | {speed:>2}km/h")
     else:
         print(f" {friend:<4}|" if friend else "     |")
@@ -145,11 +145,14 @@ def on_message(client, userdata, message):
         day = findDayNumber(day)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
-        if datetime.strptime(dep, "%H:%M") > datetime.strptime("21:00", "%H:%M"):
+        """if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:19", "%H:%M"):
             if destination == "    TAP":
+                print(vehicle_number)
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
+            print(vehicle_number)
             destination = "       KIL"
+        """
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
         if len(current) == 2: current = " " + current
