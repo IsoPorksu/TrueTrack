@@ -1,9 +1,9 @@
 # TrueTrack v7
-import json, threading, time, paho.mqtt.client as mqtt
+import json, threading, time, platform, paho.mqtt.client as mqtt
 from os import system
 from math import *
-from datetime import datetime, timezone
-import platform
+from datetime import datetime
+from pytz import timezone
 from varname import nameof
 
 global last_message
@@ -98,10 +98,10 @@ def print_vehicle_table():
         system('clear')
     runtime = datetime.now() - start_time
     runtime_seconds = str(int(runtime.total_seconds())) + "s"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone("Europe/Helsinki"))
     moment = time.time()
     ping = str(ceil((moment - last_message)*1000)) + "ms"
-    print(f" Runtime: {runtime_seconds}  Ping: {ping}  Time: {now.strftime('%H:%M:%S')}Z")
+    print(f" Runtime: {runtime_seconds}  Ping: {ping}  Time: {now.strftime('%H:%M:%S')}")
     print(" Car |  Now -> Next   ETA | Destination |Car 2| Speed")
     print(" ----|--------------------|-------------|-----|-------")
     global vs, mm, tap, kil, m100_count, m200_count, m300_count, o300_count
