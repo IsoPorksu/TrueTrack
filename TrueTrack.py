@@ -158,7 +158,6 @@ def on_message(client, userdata, message):
         destination = destinations.get(dest_key, "")
         if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:19", "%H:%M"):
             if destination == "    TAP":
-                print(vehicle_number)
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
             print(vehicle_number)
