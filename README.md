@@ -1,4 +1,4 @@
-**This repository contains at least 4 files, all of which have different purposes.**
+### This repository contains at least 4 files, all of which have different purposes.
 
 **TrueTrack.py is probably what you have come here for.** It uses a large list of co-ordinates (contained with metro_coords.json) to determine the exact position, track and destination of each train and give it a rough ETA at the next station.
 **To get TrueTrack.py up and running, simply pop it and metro_coords.json into a folder together and run TrueTrack.py.**
