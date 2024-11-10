@@ -8,12 +8,15 @@ coordinates = []
 
 def on_message(client, userdata, message):
     data = json.loads(message.payload.decode())
-    vehicle_id = data.get('VP', {}).get('veh', 'Unknown')
-    if vehicle_id == 317:
+    car = data.get('VP', {}).get('veh', 'Unknown')
+    if car == 314:
         latitude = data.get('VP', {}).get('lat', 'Unknown')
         longitude = data.get('VP', {}).get('long', 'Unknown')
-        #heading = data.get('VP', {}). get('hdg', 'Unknown')
-        print (f"({latitude}, {longitude})")
+        heading = data.get('VP', {}). get('hdg', 'Unknown')
+        sequence = data.get('VP', {}). get('seq', 'Unknown')
+        delay = data.get('VP', {}). get('dl', 'Unknown')
+
+        print (f"({car}: {sequence} {delay})")
         newCoordinate = [latitude, longitude]
         coordinates.append(newCoordinate)
     formatString = "  [[{lat},{long}], [\"\",\"\",\"1\",\"\"]],\n" #CHECK TRACK NUMBER!
