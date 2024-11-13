@@ -1,7 +1,7 @@
 # This repository contains at least 4 files, all of which have different purposes.
 
 **TrueTrack.py is probably what you have come here for.** It uses a large list of co-ordinates (contained with metro_coords.json) to determine the exact position, track and destination of each train and give it a rough ETA at the next station.
-**To get TrueTrack.py up and running, simply pop it and metro_coords.json into a folder together and run TrueTrack.py.**
+**To get TrueTrack.py up and running, simply pop it and metro_coords.json into a folder together and run TrueTrack.py. You also need to install the paho-mqtt library with pip.**
 
 Metro.py is the primitive version of TrueTrack. It runs off a hand-complied list of GPS co-ordinates for each station and is significantly less accurate, especially for M2 services, where departure-specific information, such as destination and departure time, is highly unreliable. It also cannot locate trains that are currently not within 200m of a station, so you have to wait until they arrive at their next station before their location appears.
 To get Metro.py up and running, simply run it!

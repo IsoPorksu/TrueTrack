@@ -9,9 +9,10 @@ coordinates = []
 def on_message(client, userdata, message):
     data = json.loads(message.payload.decode())
     vehicle_id = data.get('VP', {}).get('veh', 'Unknown')
-    if vehicle_id == 317:
+    if vehicle_id == 141:
         latitude = data.get('VP', {}).get('lat', 'Unknown')
-        longitude = data.get('VP', {}).get('long', 'Unknown')
+        longitude = data.get('VP', {}).get('long', 'Unknown') 
+        #acceleration = data.get('VP', {}).get('acc', 'Unknown')
         #heading = data.get('VP', {}). get('hdg', 'Unknown')
         print (f"({latitude}, {longitude})")
         newCoordinate = [latitude, longitude]
