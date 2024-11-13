@@ -13,4 +13,4 @@ Any other files are simply unedited lists of spare or extra co-ordinates generat
 
 ### Required packages:
 * paho-mqtt
-* pytz (for TruTrack.py only)
+* pytz (for TrueTrack.py only)

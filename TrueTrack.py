@@ -1,4 +1,4 @@
-# TrueTrack v8
+# TrueTrack v8.1
 import json, threading, time, platform, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -17,7 +17,7 @@ distance = 0
 with open('metro_coords.json', 'r') as file:
     coords = json.load(file)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
-m2as = [("04:57", 0), ("04:49", 5), ("05:04", 5), ("05:19", 5), ("05:34", 5), ("05:46", 5), ("06:01", 5), ("05:33", 5), ("05:48", 5), ("06:03", 5), ("06:18", 5), ("06:33", 5), ("06:48", 5), ("07:03", 5), ("05:49", 6), ("20:15", 6), ("20:30", 6), ("20:45", 6)] # A list of all services on line M1 7
+m2as = [("04:57", 0), ("04:49", 6), ("05:04", 6), ("05:19", 6), ("05:34", 6), ("05:46", 6), ("06:01", 6), ("05:33", 6), ("05:48", 6), ("06:03", 6), ("06:18", 6), ("06:33", 6), ("06:48", 6), ("07:03", 6), ("05:49", 7), ("19:29", 7), ("19:49", 7), ("19:59", 7), ("20:19", 7)] # A list of all other services on line M1 7
 destinations = {
     ("M1", 1): "VS",
     ("M1", 2): "       KIL",
@@ -61,7 +61,7 @@ def eta_maker(pos):
 def findDayNumber(day):
     date_obj = datetime.strptime(day, "%Y-%m-%d")
     day_of_week = date_obj.isoweekday()
-    if day_of_week in range (0,4):
+    if day_of_week in range (1,5):
         day_of_week = 0
     return day_of_week
 
@@ -160,7 +160,6 @@ def on_message(client, userdata, message):
             if destination == "    TAP":
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
-            print(vehicle_number)
             destination = "       KIL"
         
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
