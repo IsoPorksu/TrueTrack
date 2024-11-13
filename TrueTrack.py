@@ -161,9 +161,11 @@ def on_message(client, userdata, message):
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
             destination = "       KIL"
-        
+  
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
+        if next == "VS1" and int(eta) < 60 and int(speed) < 36:
+            next == "VS2"
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
         vehicles[vehicle_number] = current, next, eta, track, destination, speed
