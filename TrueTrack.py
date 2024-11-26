@@ -1,4 +1,4 @@
-# TrueTrack v8.1
+# TrueTrack v8.1 
 import json, threading, time, platform, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -10,6 +10,7 @@ last_message = time.time()
 start_time = datetime.now()
 vehicles = {}
 friends = {}
+last_etas = {}
 broker = "mqtt.hsl.fi"
 port = 1883
 topic = "/hfp/v2/journey/ongoing/vp/metro/#"
@@ -17,6 +18,9 @@ distance = 0
 with open('metro_coords.json', 'r') as file:
     coords = json.load(file)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
+with open('vuoro_list.json', 'r') as file:
+    vuoros = json.load(file)
+vuoros = {tuple(dep): vuoro for dep, vuoro in vuoros}
 m2as = [("04:57", 0), ("04:49", 6), ("05:04", 6), ("05:19", 6), ("05:34", 6), ("05:46", 6), ("06:01", 6), ("05:33", 6), ("05:48", 6), ("06:03", 6), ("06:18", 6), ("06:33", 6), ("06:48", 6), ("07:03", 6), ("05:49", 7), ("19:29", 7), ("19:49", 7), ("19:59", 7), ("20:19", 7)] # A list of all other services on line M1 7
 destinations = {
     ("M1", 1): "VS",
@@ -28,21 +32,24 @@ destinations = {
 ##############################################
         
 def check_friends(filtered_vehicles):
-    for vehicle_number, [current, next, eta, track, dest, speed] in filtered_vehicles.items():
-        for other_vehicle_number, [other_current, other_next, other_eta, other_track, other_dest, other_speed] in filtered_vehicles.items():
-            if other_vehicle_number != vehicle_number:
+    taken = []
+    for vehicle_number, [current, next, eta, track, dest, speed, dep] in filtered_vehicles.items():
+        for other_vehicle_number, [other_current, other_next, other_eta, other_track, other_dest, other_speed, other_dep] in filtered_vehicles.items():
+            if other_vehicle_number != vehicle_number and (vehicle_number and other_vehicle_number) not in taken:
                 if track == other_track:
-                    if current == other_current or (current == other_next and next == "") or (next == other_current and other_next == ""):
+                    if (current == other_current or (current == other_next and next == "") or (next == other_current and other_next == "")) and dep == other_dep:
                         eta = 0 if eta == "" else int(eta)
                         other_eta = 0 if other_eta == "" else int(other_eta)
                         if eta < other_eta:
-                            vehicles[other_vehicle_number] = current, next, eta, track, dest, speed
+                            vehicles[other_vehicle_number] = current, next, eta, track, dest, speed, other_dep
                             friends[other_vehicle_number] = vehicle_number
                             friends[vehicle_number] = other_vehicle_number
                         else:
-                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed
+                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed, dep
                             friends[other_vehicle_number] = vehicle_number
                             friends[vehicle_number] = other_vehicle_number
+                        taken.append(vehicle_number)
+                        taken.append(other_vehicle_number)
 
 def sync_friends():
     filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 200}
@@ -65,29 +72,33 @@ def findDayNumber(day):
         day_of_week = 0
     return day_of_week
 
-def print_maker(car, station, next, eta, destination, speed):
+def print_maker(car, station, next, eta, destination, speed, departure):
+    if car in (131, 320):
+        car = str(car)+"*"
     if next and eta:
-        print(f" {car:<4}| {station:>4} -> {next:<4} {eta:>4}s | {destination:<11} |", end="")
+        print(f" {car:<4}| {station:>4} -> {next:<4}{eta:>4}s | {destination:<11}|", end="")
     elif next:
-        print(f" {car:<4}| {station:>4} -> {next:<4}     | {destination:<11} |", end="")
+        print(f" {car:<4}| {station:>4} -> {next:<4}    | {destination:<11}|", end="")
     else:
-        print(f" {car:<4}| {station:>4}               | {destination:<11} |", end="")
+        print(f" {car:<4}| {station:>4}              | {destination:<11}|", end="")
+    if str(car).endswith("*"):
+        car = str(car)[:3]
+    car = int(car)
     
     friend = friends.get(car, "")
     if speed not in ["0", 0] and next:
-        print(f" {friend:<4}| {speed:>2}km/h" if friend else f"     | {speed:>2}km/h")
+        print(f" {friend:<4}| {speed:>2} | {departure}" if friend else f"     | {speed:>2} | {departure}")
     else:
-        print(f" {friend:<4}|" if friend else "     |")
+        print(f" {friend:<4}|    | {departure}" if friend else f"     |    | {departure}")
     
     track = station[-1] if station.endswith(("1", "2")) else ""
-    vehicles[car] = station, next, eta, track, destination, speed
+    vehicles[car] = station, next, eta, track, destination, speed, departure
 
 
 def print_vehicle_table():
     sync_friends()
     my_keys = sorted(vehicles.keys())
     sorted_vehicles = {key: vehicles[key] for key in my_keys}
-    
     if platform.system() == "Linux":
         system('clear')
     runtime = datetime.now() - start_time
@@ -95,18 +106,18 @@ def print_vehicle_table():
     now = datetime.now(timezone("Europe/Helsinki"))
     moment = time.time()
     ping = str(ceil((moment - last_message)*1000)) + "ms"
-    print(f" Runtime: {runtime_seconds}  Ping: {ping}  Time: {now.strftime('%H:%M:%S')}")
-    print(" Car |  Now -> Next   ETA | Destination |Car 2| Speed")
-    print(" ----|--------------------|-------------|-----|-------")
+    print(f" Runtime: {runtime_seconds}  Ping: {ping:>5}  Time: {now.strftime('%H:%M:%S')}")
+    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped| Vuoro")
+    print(" ----|-------------------|------------|-----|----|------")
     global vs, mm, tap, kil, m100_count, m200_count, m300_count, o300_count
     vs = mm = tap = kil = m100_count = m200_count = m300_count = o300_count = 0
     
-    for vehicle_number, [station, next, eta, track, destination, speed] in sorted_vehicles.items():
+    for vehicle_number, [station, next, eta, track, destination, speed, departure] in sorted_vehicles.items():
         eta = 0 if eta == "" else eta
         eta = str(eta)
         if eta == "0":
             eta = ""
-        print_maker(vehicle_number, station, next, eta, destination, speed )
+        print_maker(vehicle_number, station, next, eta, destination, speed, departure )
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
 
         if vehicle_number < 200:
@@ -121,13 +132,13 @@ def print_vehicle_table():
         if destination in ["VS", "  MM", "    TAP", "       KIL"]:
             globals()[{'VS': 'vs', '  MM': 'mm', '    TAP': 'tap', '       KIL': 'kil'}[destination]] += stock
 
-    print(" ----|--------------------|-------------|-----|-------")
+    print(" ----|-------------------|------------|-----|----|------")
     total = ceil(vs + mm + tap + kil)
     o = float(mm+tap)
     p = float(vs+kil)
     m2_count = str(ceil(o)) + "xM2" if o.is_integer() else str(o) + "xM2"
     m1_count = str(ceil(p)) + "xM1" if p.is_integer() else str(p) + "xM1"
-    print(f" {total:<4}| {m1_count:<7}    {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2} |     |")
+    print(f" {total:<4}| {m1_count:<7}   {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2}|     |    |")
     print(f" {ceil(m100_count)}xM100, {ceil(m200_count)}xM200, {ceil(m300_count)}xM300, {ceil(o300_count)}xO300")
 
 def update_vehicle_table():
@@ -153,6 +164,7 @@ def on_message(client, userdata, message):
         elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
 
         eta = eta_maker(pos)
+        last_etas[vehicle_number] = eta
         day = findDayNumber(day)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
@@ -161,15 +173,24 @@ def on_message(client, userdata, message):
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
             destination = "       KIL"
+        
+        key = (dep, day, line, int(track))
+        if key in vuoros:
+            dep = vuoros[key]
+        else:
+            key = (dep, day, line, 1)
+            if key in vuoros:
+                dep = vuoros[key]
   
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
         if next == "VS1" and int(eta) < 60 and int(speed) < 36:
             next == "VS2"
+        departure = dep
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
-        vehicles[vehicle_number] = current, next, eta, track, destination, speed
-        if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed
+        vehicles[vehicle_number] = current, next, eta, track, destination, speed, departure
+        if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
 
 
 client = mqtt.Client()
