@@ -1,8 +1,8 @@
-# TrueTrack v8.1 
+# TrueTrack v8.5
 import json, threading, time, platform, paho.mqtt.client as mqtt
 from os import system
 from math import *
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pytz import timezone
 
 global last_message
@@ -20,6 +20,8 @@ with open('metro_coords.json', 'r') as file:
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
 with open('vuoro_list.json', 'r') as file:
     vuoros = json.load(file)
+with open('special_timetables.json', 'r') as file:
+    specials = json.load(file)
 vuoros = {tuple(dep): vuoro for dep, vuoro in vuoros}
 m2as = [("04:57", 0), ("04:49", 6), ("05:04", 6), ("05:19", 6), ("05:34", 6), ("05:46", 6), ("06:01", 6), ("05:33", 6), ("05:48", 6), ("06:03", 6), ("06:18", 6), ("06:33", 6), ("06:48", 6), ("07:03", 6), ("05:49", 7), ("19:29", 7), ("19:49", 7), ("19:59", 7), ("20:19", 7)] # A list of all other services on line M1 7
 destinations = {
@@ -29,8 +31,8 @@ destinations = {
     ("M2", 2): "    TAP",
 }
 
-##############################################
-        
+##############################################  
+
 def check_friends(filtered_vehicles):
     taken = []
     for vehicle_number, [current, next, eta, track, dest, speed, dep] in filtered_vehicles.items():
@@ -72,16 +74,25 @@ def findDayNumber(day):
         day_of_week = 0
     return day_of_week
 
+def check_timetable():
+    date = (datetime.now(timezone("Europe/Helsinki")) - timedelta(hours=3)).date()
+    timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
+    date = date.strftime("%d.%m.%y")
+    timetable = next((item[1] for item in specials if item[0] == date), timetable)
+    return timetable
+
 def print_maker(car, station, next, eta, destination, speed, departure):
     if car in (131, 320):
         car = str(car)+"*"
+    if car in (141, 179):
+        car = str(car)+"'"
     if next and eta:
         print(f" {car:<4}| {station:>4} -> {next:<4}{eta:>4}s | {destination:<11}|", end="")
     elif next:
         print(f" {car:<4}| {station:>4} -> {next:<4}    | {destination:<11}|", end="")
     else:
         print(f" {car:<4}| {station:>4}              | {destination:<11}|", end="")
-    if str(car).endswith("*"):
+    if str(car).endswith("*") or str(car).endswith("'"):
         car = str(car)[:3]
     car = int(car)
     
@@ -105,41 +116,45 @@ def print_vehicle_table():
     runtime_seconds = str(int(runtime.total_seconds())) + "s"
     now = datetime.now(timezone("Europe/Helsinki"))
     moment = time.time()
-    ping = str(ceil((moment - last_message)*1000)) + "ms"
-    print(f" Runtime: {runtime_seconds}  Ping: {ping:>5}  Time: {now.strftime('%H:%M:%S')}")
+    ping = str(ceil((moment - last_message) * 1000)) + "ms"
+    print(f" Runtime: {runtime_seconds}  Ping: {ping:>5}  Time: {now.strftime('%H:%M:%S')} Timetable: {check_timetable()}")
     print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped| Vuoro")
     print(" ----|-------------------|------------|-----|----|------")
-    global vs, mm, tap, kil, m100_count, m200_count, m300_count, o300_count
-    vs = mm = tap = kil = m100_count = m200_count = m300_count = o300_count = 0
-    
+    counters = {'vs': 0, 'mm': 0, 'tap': 0, 'kil': 0, 'm100_count': 0, 'm200_count': 0, 'm300_count': 0, 'o300_count': 0}
+    destination_map = {"VS": 'vs', "  MM": 'mm', "    TAP": 'tap', "       KIL": 'kil'}
+    vehicle_ranges = [(range(200), 'm100_count', 0.5),
+        (range(201, 224), 'm200_count', 0.5),
+        (range(301, 321), 'm300_count', 1),
+        (range(321, 326), 'o300_count', 1)]
     for vehicle_number, [station, next, eta, track, destination, speed, departure] in sorted_vehicles.items():
-        eta = 0 if eta == "" else eta
-        eta = str(eta)
+        eta = "" if eta == "" else str(eta)
         if eta == "0":
             eta = ""
-        print_maker(vehicle_number, station, next, eta, destination, speed, departure )
+        print_maker(vehicle_number, station, next, eta, destination, speed, departure)
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
-
-        if vehicle_number < 200:
-            m100_count += 0.5
-        elif 201 <= vehicle_number <= 223:
-            m200_count += 0.5
-        elif 301 <= vehicle_number <= 320:
-            m300_count += 1
-        elif 321 <= vehicle_number <= 325:
-            o300_count += 1
-
-        if destination in ["VS", "  MM", "    TAP", "       KIL"]:
-            globals()[{'VS': 'vs', '  MM': 'mm', '    TAP': 'tap', '       KIL': 'kil'}[destination]] += stock
-
+        for number_range, count_name, increment in vehicle_ranges:
+            if vehicle_number in number_range:
+                counters[count_name] += increment
+        if destination in destination_map:
+            counters[destination_map[destination]] += stock
     print(" ----|-------------------|------------|-----|----|------")
-    total = ceil(vs + mm + tap + kil)
-    o = float(mm+tap)
-    p = float(vs+kil)
-    m2_count = str(ceil(o)) + "xM2" if o.is_integer() else str(o) + "xM2"
-    m1_count = str(ceil(p)) + "xM1" if p.is_integer() else str(p) + "xM1"
-    print(f" {total:<4}| {m1_count:<7}   {m2_count:>7} | {ceil(vs):<2} {ceil(mm):<2} {ceil(tap):<2} {ceil(kil):<2}|     |    |")
-    print(f" {ceil(m100_count)}xM100, {ceil(m200_count)}xM200, {ceil(m300_count)}xM300, {ceil(o300_count)}xO300")
+    total = ceil(counters['vs'] + counters['mm'] + counters['tap'] + counters['kil'])
+    o = float(counters['mm'] + counters['tap'])
+    p = float(counters['vs'] + counters['kil'])
+    m2_count = f"{ceil(o)}xM2" if o.is_integer() else f"{o}xM2"
+    m1_count = f"{ceil(p)}xM1" if p.is_integer() else f"{p}xM1"
+    print(f" {total:<4}| {m1_count:<7}   {m2_count:>7} | {ceil(counters['vs']):<2} {ceil(counters['mm']):<2} "
+          f"{ceil(counters['tap']):<2} {ceil(counters['kil']):<2}|     |    |")
+    if counters['m200_count'] == 0 and counters['o300_count'] == 0:
+        return ":c"
+    if counters['m200_count'] == 0:
+        return ">:("
+    ratio = counters['o300_count'] / counters['m200_count']
+    emotions = [":}", ":]", ":3", "^o^", "^_^", ":D", ":)", ":c", ":|", ":'(", ":", ">:("]
+    emotion = emotions[min(int(ratio * 6), 11)]
+    print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, "
+          f"{ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
+
 
 def update_vehicle_table():
     while True:
