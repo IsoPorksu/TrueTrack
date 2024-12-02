@@ -107,6 +107,7 @@ def print_maker(car, station, next, eta, destination, speed, departure):
 
 
 def print_vehicle_table():
+    station_counter = 0
     sync_friends()
     my_keys = sorted(vehicles.keys())
     sorted_vehicles = {key: vehicles[key] for key in my_keys}
@@ -117,7 +118,7 @@ def print_vehicle_table():
     now = datetime.now(timezone("Europe/Helsinki"))
     moment = time.time()
     ping = str(ceil((moment - last_message) * 1000)) + "ms"
-    print(f" Runtime: {runtime_seconds}  Ping: {ping:>5}  Time: {now.strftime('%H:%M:%S')} Timetable: {check_timetable()}")
+    print(f" Runtime: {runtime_seconds}  Ping: {ping:>5}  Time: {now.strftime('%H:%M:%S')}  Timetable: {check_timetable()}")
     print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped| Vuoro")
     print(" ----|-------------------|------------|-----|----|------")
     counters = {'vs': 0, 'mm': 0, 'tap': 0, 'kil': 0, 'm100_count': 0, 'm200_count': 0, 'm300_count': 0, 'o300_count': 0}
@@ -132,6 +133,8 @@ def print_vehicle_table():
             eta = ""
         print_maker(vehicle_number, station, next, eta, destination, speed, departure)
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
+        if next == "":
+            station_counter =+1
         for number_range, count_name, increment in vehicle_ranges:
             if vehicle_number in number_range:
                 counters[count_name] += increment
@@ -145,15 +148,11 @@ def print_vehicle_table():
     m1_count = f"{ceil(p)}xM1" if p.is_integer() else f"{p}xM1"
     print(f" {total:<4}| {m1_count:<7}   {m2_count:>7} | {ceil(counters['vs']):<2} {ceil(counters['mm']):<2} "
           f"{ceil(counters['tap']):<2} {ceil(counters['kil']):<2}|     |    |")
-    if counters['m200_count'] == 0 and counters['o300_count'] == 0:
-        return ":c"
-    if counters['m200_count'] == 0:
-        return ">:("
-    ratio = counters['o300_count'] / counters['m200_count']
-    emotions = [":}", ":]", ":3", "^o^", "^_^", ":D", ":)", ":c", ":|", ":'(", ":", ">:("]
-    emotion = emotions[min(int(ratio * 6), 11)]
-    print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, "
-          f"{ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
+    emotions = [":D", ":)", ":|", ":(", ":C", ">:("]
+    emotion = emotions[counters['o300_count']]
+    print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
+    if station_counter >= 20:
+          print("ALL TRAFFIC IS STOPPED.") 
 
 
 def update_vehicle_table():
