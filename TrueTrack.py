@@ -207,7 +207,7 @@ def on_message(client, userdata, message):
         vehicles[vehicle_number] = current, next, eta, track, destination, speed, departure
         if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
 
-
+timetable = check_timetable()
 client = mqtt.Client()
 client.on_message = on_message
 client.connect(broker, port)
