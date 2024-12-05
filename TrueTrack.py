@@ -5,7 +5,7 @@ from math import *
 from datetime import datetime, timezone, timedelta
 from pytz import timezone
 
-global last_message
+global last_message, timetable
 last_message = time.time()
 start_time = datetime.now()
 vehicles = {}
@@ -157,6 +157,7 @@ def print_vehicle_table():
 
 def update_vehicle_table():
     while True:
+        timetable = check_timetable()
         print_vehicle_table()
         time.sleep(1)
 
@@ -188,11 +189,11 @@ def on_message(client, userdata, message):
         elif (dep, day) in m2as and destination == "    TAP":
             destination = "       KIL"
         
-        key = (dep, day, line, int(track))
+        key = (dep, timetable, line, int(track))
         if key in vuoros:
             dep = vuoros[key]
         else:
-            key = (dep, day, line, 1)
+            key = (dep, timetable, line, 1)
             if key in vuoros:
                 dep = vuoros[key]
   
