@@ -86,13 +86,15 @@ def print_maker(car, station, next, eta, destination, speed, departure):
         car = str(car)+"*"
     if car in (141, 179):
         car = str(car)+"'"
+    if car in (000, 135):
+        car = str(car)+"+"
     if next and eta:
         print(f" {car:<4}| {station:>4} -> {next:<4}{eta:>4}s | {destination:<11}|", end="")
     elif next:
         print(f" {car:<4}| {station:>4} -> {next:<4}    | {destination:<11}|", end="")
     else:
         print(f" {car:<4}| {station:>4}              | {destination:<11}|", end="")
-    if str(car).endswith("*") or str(car).endswith("'"):
+    if len(str(car))>3:
         car = str(car)[:3]
     car = int(car)
     
