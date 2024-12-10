@@ -1,9 +1,7 @@
 ## Please download the latest version, as this is guaranteed to function correctly and be stable.
-Other, newer version of files may still be works in progress, or rely on other files which aren't mentioned here. So, play it safe and download the latest version to get it running.
+This Readme only covers, and endorses the use of, said latest version.
 
-
-**This repository contains at least 5 files, all of which have different purposes.**
-
+**v8.1 contains three main files.**
 
 
 ### TrueTrack.py is probably what you have come here for.
