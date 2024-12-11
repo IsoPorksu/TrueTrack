@@ -135,13 +135,10 @@ def print_vehicle_table():
             eta = ""
         print_maker(vehicle_number, station, next, eta, destination, speed, departure)
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
-        if next == "":
-            station_counter =+1
+        if next == "": station_counter =+1
         for number_range, count_name, increment in vehicle_ranges:
-            if vehicle_number in number_range:
-                counters[count_name] += increment
-        if destination in destination_map:
-            counters[destination_map[destination]] += stock
+            if vehicle_number in number_range: counters[count_name] += increment
+        if destination in destination_map: counters[destination_map[destination]] += stock
     print(" ----|-------------------|------------|-----|----|------")
     total = ceil(counters['vs'] + counters['mm'] + counters['tap'] + counters['kil'])
     o = float(counters['mm'] + counters['tap'])
@@ -180,8 +177,6 @@ def on_message(client, userdata, message):
         elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
         elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
 
-        eta = eta_maker(pos)
-        last_etas[vehicle_number] = eta
         day = findDayNumber(day)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
@@ -192,12 +187,10 @@ def on_message(client, userdata, message):
             destination = "       KIL"
         
         key = (dep, timetable, line, int(track))
-        if key in vuoros:
-            dep = vuoros[key]
+        if key in vuoros: dep = vuoros[key]
         else:
             key = (dep, timetable, line, 1)
-            if key in vuoros:
-                dep = vuoros[key]
+            if key in vuoros: dep = vuoros[key]
   
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
@@ -206,6 +199,12 @@ def on_message(client, userdata, message):
         departure = dep
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
+
+        eta = eta_maker(pos)
+        if last_etas[vehicle_number] == eta:
+            a, b, eta, c, d, e, f == vehicles[vehicle_number] # a-f are time-wasters
+            eta -= 1
+        else: last_etas[vehicle_number] = eta
         vehicles[vehicle_number] = current, next, eta, track, destination, speed, departure
         if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
 
