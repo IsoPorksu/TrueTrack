@@ -1,5 +1,5 @@
 # TrueTrack v8.5
-import json, threading, time, platform, paho.mqtt.client as mqtt
+import json, asyncio, time, platform, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
@@ -154,20 +154,20 @@ def print_vehicle_table():
           print("ALL TRAFFIC IS STOPPED.") 
 
 
-def update_vehicle_table():
+async def update_vehicle_table():
     while True:
         global timetable
         timetable = check_timetable()
         print_vehicle_table()
         time.sleep(1)
 
-def update_etas():
+"""def update_etas():
     while True:
         for vehicle in vehicles:
             station, next, eta, track, destination, speed, departure = vehicles[vehicle]
             eta = int(eta) - 1 if eta != "" else eta
             vehicles[vehicle] == station, next, eta, track, destination, speed, departure
-        time.sleep(1)
+        time.sleep(1)"""
 
 def on_message(client, userdata, message):
     global last_message
@@ -209,28 +209,26 @@ def on_message(client, userdata, message):
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
 
         eta = eta_maker(pos)
-        eta = str(int(eta) + 30) if eta != "" else eta
-        if vehicle_number in last_etas:
-            if last_etas[vehicle_number] == eta or eta == "":
-                a, b, eta, c, d, e, f == vehicles[vehicle_number] # a-f are time-wasters
-                eta += 1
-            else: last_etas[vehicle_number] = eta
+        eta = str(int(eta) + 0) if eta != "" else eta
         if next == "VS1" and int(eta) < 60 and int(speed) < 36:
             next == "VS2" # Needs to be here because it references eta
         vehicles[vehicle_number] = current, next, eta, track, destination, speed, departure
-        if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
+        #if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
 
-timetable = check_timetable()
-client = mqtt.Client()
-client.on_message = on_message
-client.connect(broker, port)
-client.subscribe(topic)
-threading.Thread(target=update_vehicle_table, daemon=True).start()
-threading.Thread(target=update_etas, daemon=True).start()
-client.loop_start()
-stop_event = threading.Event()
-try:
-    stop_event.wait()
-except KeyboardInterrupt:
-    client.loop_stop()
-    client.disconnect()
+async def main():
+    timetable = check_timetable()
+    client = mqtt.Client()
+    client.on_message = on_message
+    client.connect(broker, port)
+    client.subscribe(topic)
+    asyncio.create_task(update_vehicle_table())
+    client.loop_start()
+    stop_event = asyncio.Event()
+    try:
+        stop_event.wait()
+    except KeyboardInterrupt:
+        client.loop_stop()
+        client.disconnect()
+
+if __name__ == "__main__":
+    asyncio.run(main())
