@@ -1,9 +1,7 @@
 ## Please download the latest version, as this is guaranteed to function correctly and be stable.
-Other, newer version of files may still be works in progress, or rely on other files which aren't mentioned here. So, play it safe and download the latest version to get it running.
+This Readme only covers, and endorses the use of, said latest version.
 
-
-**This repository contains at least 5 files, all of which have different purposes.**
-
+**v8.1 contains three main files.**
 
 
 ### TrueTrack.py is probably what you have come here for.
@@ -17,7 +15,7 @@ It runs off a hand-complied list of GPS co-ordinates for each station and is sig
 **To get Metro.py up and running, simply run it!**
 
 ### MatterHard.py is only intended for dev use.
-Its sole purpose is to automatically collect co-ordinates from the system by following a specific car and dumping its co-ordinates into a JSON file.
+Its sole purpose is to automatically collect the co-ordinates of the system's internal locator tags by following a specific car and continuously dumping its co-ordinates into a JSON file.
 
 ### Any other files are not neccesary for the other programs to function (yet)
 vuoro_list.json will (eventually) be a full list of vuoros throughout the week; for now, it's just sitting there, silently propping up TrueTrack.
