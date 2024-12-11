@@ -130,7 +130,7 @@ def print_vehicle_table():
         (range(301, 321), 'm300_count', 1),
         (range(321, 326), 'o300_count', 1)]
     for vehicle_number, [station, next, eta, track, destination, speed, departure] in sorted_vehicles.items():
-        eta = "" if eta == "" else str(eta)
+        eta = str(eta)
         if eta == "0":
             eta = ""
         print_maker(vehicle_number, station, next, eta, destination, speed, departure)
@@ -150,14 +150,23 @@ def print_vehicle_table():
     emotions = [":D", ":)", ":|", ":(", ":C", ">:("]
     emotion = emotions[counters['o300_count']]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
-    if station_counter >= 20:
+    if station_counter >= 15 and station_counter == o+p:
           print("ALL TRAFFIC IS STOPPED.") 
 
 
 def update_vehicle_table():
     while True:
+        global timetable
         timetable = check_timetable()
         print_vehicle_table()
+        time.sleep(1)
+
+def update_etas():
+    while True:
+        for vehicle in vehicles:
+            station, next, eta, track, destination, speed, departure = vehicles[vehicle]
+            eta = int(eta) - 1 if eta != "" else eta
+            vehicles[vehicle] == station, next, eta, track, destination, speed, departure
         time.sleep(1)
 
 def on_message(client, userdata, message):
@@ -194,19 +203,19 @@ def on_message(client, userdata, message):
   
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
-        if next == "VS1" and int(eta) < 60 and int(speed) < 36:
-            next == "VS2"
         departure = dep
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
 
-        eta = int(eta_maker(pos))
-        eta = str(eta + 30) if eta != "" else eta
+        eta = eta_maker(pos)
+        eta = str(int(eta) + 30) if eta != "" else eta
         if vehicle_number in last_etas:
-            if last_etas[vehicle_number] == eta:
+            if last_etas[vehicle_number] == eta or eta == "":
                 a, b, eta, c, d, e, f == vehicles[vehicle_number] # a-f are time-wasters
-                eta -= 1
+                eta += 1
             else: last_etas[vehicle_number] = eta
+        if next == "VS1" and int(eta) < 60 and int(speed) < 36:
+            next == "VS2" # Needs to be here because it references eta
         vehicles[vehicle_number] = current, next, eta, track, destination, speed, departure
         if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
 
@@ -216,6 +225,7 @@ client.on_message = on_message
 client.connect(broker, port)
 client.subscribe(topic)
 threading.Thread(target=update_vehicle_table, daemon=True).start()
+threading.Thread(target=update_etas, daemon=True).start()
 client.loop_start()
 stop_event = threading.Event()
 try:
