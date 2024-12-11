@@ -188,7 +188,7 @@ def on_message(client, userdata, message):
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
             destination = "       KIL"
-        
+
         key = (dep, timetable, line, int(track))
         if key in vuoros:
             dep = vuoros[key]
@@ -196,7 +196,7 @@ def on_message(client, userdata, message):
             key = (dep, timetable, line, 1)
             if key in vuoros:
                 dep = vuoros[key]
-  
+
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
         if next == "VS1" and int(eta) < 60 and int(speed) < 36:
