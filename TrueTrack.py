@@ -200,11 +200,13 @@ def on_message(client, userdata, message):
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
 
-        eta = eta_maker(pos)
-        if last_etas[vehicle_number] == eta:
-            a, b, eta, c, d, e, f == vehicles[vehicle_number] # a-f are time-wasters
-            eta -= 1
-        else: last_etas[vehicle_number] = eta
+        eta = int(eta_maker(pos))
+        eta = str(eta + 30) if eta != "" else eta
+        if vehicle_number in last_etas:
+            if last_etas[vehicle_number] == eta:
+                a, b, eta, c, d, e, f == vehicles[vehicle_number] # a-f are time-wasters
+                eta -= 1
+            else: last_etas[vehicle_number] = eta
         vehicles[vehicle_number] = current, next, eta, track, destination, speed, departure
         if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
 
