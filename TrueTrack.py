@@ -1,5 +1,5 @@
 # TrueTrack v8.5
-import json, asyncio, time, platform, paho.mqtt.client as mqtt
+import json, threading, time, platform, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
@@ -8,7 +8,9 @@ from pytz import timezone
 global last_message, timetable
 last_message = time.time()
 start_time = datetime.now()
-vehicles = friends = {}
+vehicles = {}
+friends = {}
+last_etas = {}
 broker = "mqtt.hsl.fi"
 port = 1883
 topic = "/hfp/v2/journey/ongoing/vp/metro/#"
@@ -22,7 +24,7 @@ with open('special_timetables.json', 'r') as file:
     specials = json.load(file)
 vuoros = {tuple(dep): vuoro for dep, vuoro in vuoros}
 m2as = [("04:57", 0), ("04:49", 6), ("05:04", 6), ("05:19", 6), ("05:34", 6), ("05:46", 6), ("06:01", 6), ("05:33", 6), ("05:48", 6), ("06:03", 6), ("06:18", 6), ("06:33", 6), ("06:48", 6), ("07:03", 6), ("05:49", 7), ("19:29", 7), ("19:49", 7), ("19:59", 7), ("20:19", 7)] # A list of all other services on line M1 7
-dests = {
+destinations = {
     ("M1", 1): "VS",
     ("M1", 2): "       KIL",
     ("M2", 1): "  MM",
@@ -79,7 +81,7 @@ def check_timetable():
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
     return timetable
 
-def print_maker(car, station, next, eta, dest, speed, dep):
+def print_maker(car, station, next, eta, destination, speed, departure):
     if car in (131, 320):
         car = str(car)+"*"
     if car in (141, 179):
@@ -87,23 +89,23 @@ def print_maker(car, station, next, eta, dest, speed, dep):
     if car in (000, 135):
         car = str(car)+"+"
     if next and eta:
-        print(f" {car:<4}| {station:>4} -> {next:<4}{eta:>4}s | {dest:<11}|", end="")
+        print(f" {car:<4}| {station:>4} -> {next:<4}{eta:>4}s | {destination:<11}|", end="")
     elif next:
-        print(f" {car:<4}| {station:>4} -> {next:<4}    | {dest:<11}|", end="")
+        print(f" {car:<4}| {station:>4} -> {next:<4}    | {destination:<11}|", end="")
     else:
-        print(f" {car:<4}| {station:>4}              | {dest:<11}|", end="")
+        print(f" {car:<4}| {station:>4}              | {destination:<11}|", end="")
     if len(str(car))>3:
         car = str(car)[:3]
     car = int(car)
     
     friend = friends.get(car, "")
     if speed not in ["0", 0] and next:
-        print(f" {friend:<4}| {speed:>2} | {dep}" if friend else f"     | {speed:>2} | {dep}")
+        print(f" {friend:<4}| {speed:>2} | {departure}" if friend else f"     | {speed:>2} | {departure}")
     else:
-        print(f" {friend:<4}|    | {dep}" if friend else f"     |    | {dep}")
+        print(f" {friend:<4}|    | {departure}" if friend else f"     |    | {departure}")
     
     track = station[-1] if station.endswith(("1", "2")) else ""
-    vehicles[car] = station, next, eta, track, dest, speed, dep
+    vehicles[car] = station, next, eta, track, destination, speed, departure
 
 
 def print_vehicle_table():
@@ -119,24 +121,27 @@ def print_vehicle_table():
     moment = time.time()
     ping = str(ceil((moment - last_message) * 1000)) + "ms"
     print(f" Runtime: {runtime_seconds}  Ping: {ping:>5}  Time: {now.strftime('%H:%M:%S')}  Timetable: {check_timetable()}")
-    print(" Set |  Now -> Next  ETA | Dest|Set 2|Sped| Vuoro")
+    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped| Vuoro")
     print(" ----|-------------------|------------|-----|----|------")
     counters = {'vs': 0, 'mm': 0, 'tap': 0, 'kil': 0, 'm100_count': 0, 'm200_count': 0, 'm300_count': 0, 'o300_count': 0}
-    dest_map = {"VS": 'vs', "  MM": 'mm', "    TAP": 'tap', "       KIL": 'kil'}
+    destination_map = {"VS": 'vs', "  MM": 'mm', "    TAP": 'tap', "       KIL": 'kil'}
     vehicle_ranges = [(range(200), 'm100_count', 0.5),
         (range(201, 224), 'm200_count', 0.5),
         (range(301, 321), 'm300_count', 1),
         (range(321, 326), 'o300_count', 1)]
-    for vehicle_number, [station, next, eta, track, dest, speed, dep] in sorted_vehicles.items():
-        eta = str(eta)
+    for vehicle_number, [station, next, eta, track, destination, speed, departure] in sorted_vehicles.items():
+        eta = "" if eta == "" else str(eta)
         if eta == "0":
             eta = ""
-        print_maker(vehicle_number, station, next, eta, dest, speed, dep)
+        print_maker(vehicle_number, station, next, eta, destination, speed, departure)
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
-        if next == "": station_counter =+1
+        if next == "":
+            station_counter =+1
         for number_range, count_name, increment in vehicle_ranges:
-            if vehicle_number in number_range: counters[count_name] += increment
-        if dest in dest_map: counters[dest_map[dest]] += stock
+            if vehicle_number in number_range:
+                counters[count_name] += increment
+        if destination in destination_map:
+            counters[destination_map[destination]] += stock
     print(" ----|-------------------|------------|-----|----|------")
     total = ceil(counters['vs'] + counters['mm'] + counters['tap'] + counters['kil'])
     o = float(counters['mm'] + counters['tap'])
@@ -148,13 +153,12 @@ def print_vehicle_table():
     emotions = [":D", ":)", ":|", ":(", ":C", ">:("]
     emotion = emotions[counters['o300_count']]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
-    if station_counter >= 15 and station_counter == o+p:
+    if station_counter >= 20:
           print("ALL TRAFFIC IS STOPPED.") 
 
 
-async def update_vehicle_table():
+def update_vehicle_table():
     while True:
-        global timetable
         timetable = check_timetable()
         print_vehicle_table()
         time.sleep(1)
@@ -176,48 +180,45 @@ def on_message(client, userdata, message):
         elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
         elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
 
+        eta = eta_maker(pos)
+        last_etas[vehicle_number] = eta
         day = findDayNumber(day)
         dest_key = (line, int(track))
-        dest = dests.get(dest_key, "")
+        destination = destinations.get(dest_key, "")
         if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:19", "%H:%M"):
-            if dest == "    TAP":
-                dest = "       KIL"
-        elif (dep, day) in m2as and dest == "    TAP":
-            dest = "       KIL"
-
+            if destination == "    TAP":
+                destination = "       KIL"
+        elif (dep, day) in m2as and destination == "    TAP":
+            destination = "       KIL"
+        
         key = (dep, timetable, line, int(track))
-        if key in vuoros: dep = vuoros[key]
+        if key in vuoros:
+            dep = vuoros[key]
         else:
             key = (dep, timetable, line, 1)
             if key in vuoros:
                 dep = vuoros[key]
-
+  
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
-        dep = dep
+        if next == "VS1" and int(eta) < 60 and int(speed) < 36:
+            next == "VS2"
+        departure = dep
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
+        vehicles[vehicle_number] = current, next, eta, track, destination, speed, departure
+        if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure
 
-        eta = eta_maker(pos)
-        eta = str(int(eta) + 0) if eta != "" else eta
-        if next == "VS1" and int(eta) < 60 and int(speed) < 36:
-            next == "VS2" # Needs to be here because it references eta
-        vehicles[vehicle_number] = current, next, eta, track, dest, speed, dep
-
-async def main():
-    timetable = check_timetable()
-    client = mqtt.Client()
-    client.on_message = on_message
-    client.connect(broker, port)
-    client.subscribe(topic)
-    asyncio.create_task(update_vehicle_table())
-    client.loop_start()
-    stop_event = asyncio.Event()
-    try:
-        stop_event.wait()
-    except KeyboardInterrupt:
-        client.loop_stop()
-        client.disconnect()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+timetable = check_timetable()
+client = mqtt.Client()
+client.on_message = on_message
+client.connect(broker, port)
+client.subscribe(topic)
+threading.Thread(target=update_vehicle_table, daemon=True).start()
+client.loop_start()
+stop_event = threading.Event()
+try:
+    stop_event.wait()
+except KeyboardInterrupt:
+    client.loop_stop()
+    client.disconnect()
