@@ -88,6 +88,8 @@ def print_maker(car, station, next, eta, destination, speed, departure):
         car = str(car)+"'"
     if car in (000, 135):
         car = str(car)+"+"
+    if car in (000, 155):
+        car = str(car)+"-"
     if next and eta:
         print(f" {car:<4}| {station:>4} -> {next:<4}{eta:>4}s | {destination:<11}|", end="")
     elif next:
@@ -189,6 +191,8 @@ def on_message(client, userdata, message):
             if destination == "    TAP":
                 destination = "       KIL"
         elif (dep, day) in m2as and destination == "    TAP":
+            destination = "       KIL"
+        if timetable == "XS" and dep == "10:20":
             destination = "       KIL"
         
         key = (dep, timetable, line, int(track))
