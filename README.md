@@ -23,5 +23,5 @@ Any other files are simply unedited lists of spare or extra co-ordinates generat
 
 
 ## Required packages:
-* paho-mqtt (all files)
+* paho-mqtt (for all files - this gets the positional data from the Digitransit interface)
 * pytz (for TrueTrack.py only)
