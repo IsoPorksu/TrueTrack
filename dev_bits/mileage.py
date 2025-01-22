@@ -1,3 +1,13 @@
+import gspread, platform
+from os import system
+from google.oauth2.service_account import Credentials
+print("Starting...")
+SCOPE = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+CREDS = Credentials.from_service_account_file('mileage-machine-3000-8c0f154bda27.json', scopes=SCOPE)
+client = gspread.authorize(CREDS)
+sheet = client.open("Transport List 2025").sheet1
+rows = sheet.get_all_values()
+
 stations = {
     "kilk":-0.3,
     "kil": 0.0,
@@ -34,24 +44,42 @@ stations = {
     "mm": 37.1,
     "mmg": 37.4
 }
-distances = 0
+distances = a = 0
+x = input("Enter start row: ")
 while True:
-    station1 = input(" ")
-    if station1=="done": break
-    station2 = input(" ")
-
-    if station1 in stations and station2 in stations:
-        if station1<station2:
-            distance = stations[station2] - stations[station1]
+    try: x = int(x)-1
+    except Exception:
+        x = input("An integer, please. Let's try again: ")
+    else: break
+#print(rows)
+for i, row in enumerate(rows[x:], start=2):
+    start = row[7].lower()
+    end = row[9].lower()
+    if row[1]=='2' or row[1]=='3':
+        station1 = start[:-1]
+        station2 = end[:-1]
+        if platform.system() == "Linux":
+            system('clear')
+            print("Starting...")
+            print("Working...")
+            print(f"Calculating journey no. {a+1}...")
+            print(station1.upper()+"-"+station2.upper())
+        if station1 in stations and station2 in stations:
+            if station1<station2:
+                distance = stations[station2] - stations[station1]
+            else:
+                distance = stations[station1] - stations[station2]
+            distance=round(distance, 1)
+            if distance<0: distance=abs(distance)
         else:
-            distance = stations[station1] - stations[station2]
-        distance=round(distance, 1)
-        if distance<0: distance=abs(distance)
-    else:
-        distance=None
-    if distance is not None:
-        print(f" {station1}-{station2} is {distance}km")
-        distances+=distance
-    else:
-        print(" Invalid!")
-print(f" Total: {distances}km")
+            distance=None
+        if distance is not None:
+            sheet.update_cell(i+x-1, 12, distance)
+            distances+=distance
+            a+=1
+
+if platform.system() == "Linux":
+    system('clear')
+    print("Starting...")
+    print("Working...")
+    print(f"Calculated {a} journeys with a total distance of {round(distances, 1)}km.")
