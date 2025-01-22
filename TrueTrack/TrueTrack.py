@@ -16,10 +16,10 @@ broker, port, topic = "mqtt.hsl.fi", 1883, "/hfp/v2/journey/ongoing/vp/metro/#"
 QUERY = '{alerts(route:"HSL:31M2"){alertDescriptionText}}'
 
 # Load data
-with open('metro_coords.json', 'r') as file:
+with open('TrueTrack/metro_coords.json', 'r') as file:
     coords = json.load(file)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
-with open('special_timetables.json', 'r') as file:
+with open('TrueTrack/special_timetables.json', 'r') as file:
     specials = json.load(file)
 
 # Service times (M2)
@@ -190,7 +190,7 @@ def on_message(client, userdata, message):
         elif (dep, timetable) in m2as and destination == "    TAP":
             destination = "       KIL" 
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
-        # Short-term dest fixing
+        # Short-term dest fixing during disruption
         """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
         if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
         if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
@@ -203,6 +203,10 @@ def on_message(client, userdata, message):
         if vuoro == 'Unknown':
             if car in vehicles:
                 vuoro = vehicles[car][-1]
+        if car in vehicles and eta != '' and vehicles[car][2] != '':
+            if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
+                eta=""
+                current, next = next, current
         vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 
