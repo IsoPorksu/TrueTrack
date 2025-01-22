@@ -124,8 +124,7 @@ def print_vehicle_table():
     runtime = datetime.now() - start_time
     runtime_seconds = str(int(runtime.total_seconds())) + "s"
     now = datetime.now(timezone("Europe/Helsinki"))
-    moment = time.time()
-    ping = str(ceil((moment - last_message) * 1000)) + "ms"
+    ping = str(ceil((time.time() - last_message) * 1000)) + "ms"
     print(f" Runtime: {runtime_seconds}  Ping: {ping:>5}  Time: {now.strftime('%H:%M:%S')}  Timetable: {check_timetable()}")
     print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Depart")
     print(" ----|-------------------|------------|-----|----|------")
@@ -158,7 +157,7 @@ def print_vehicle_table():
     emotions = [":D", ":)", ":|", ":(", ":C", ">:("]
     emotion = emotions[counters['o300_count']]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
-    if int(station_counter) > int(o+p-2) and int(runtime.total_seconds())>1:
+    if int(station_counter) >= ceil(counters['m100_count'])+ceil(counters['m200_count'])+ceil(counters['m300_count']) and int(runtime.total_seconds())>1:
         print(" ALL TRAFFIC IS STOPPED")
     #print(" NO TRAFFIC LAS-KP")
 
