@@ -1,5 +1,5 @@
 # TrueTrack v8.5
-import json, threading, time, platform, paho.mqtt.client as mqtt
+import json, threading, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
@@ -11,10 +11,18 @@ start_time = datetime.now()
 vehicles = {}
 friends = {}
 last_etas = {}
+digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
+API_KEY = my_secret = "5442e22683ae4d7ba9dc5149b51daa2e"
+headers = {"Content-Type": "application/json", "digitransit-subscription-key": API_KEY}
 broker = "mqtt.hsl.fi"
 port = 1883
 topic = "/hfp/v2/journey/ongoing/vp/metro/#"
 distance = 0
+query = """{
+  alerts (route: "HSL:31M2") {
+    alertDescriptionText
+  }
+}"""
 with open('metro_coords.json', 'r') as file:
     coords = json.load(file)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
@@ -79,7 +87,7 @@ def check_timetable():
     timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
-    #timetable = "HÄTÄ"
+    #timetable = "HÄTÄ" # Häiriö
     return timetable
 
 def print_maker(car, station, next, eta, destination, speed, departure, seq):
@@ -157,15 +165,18 @@ def print_vehicle_table():
     emotions = [":D", ":)", ":|", ":(", ":C", ">:("]
     emotion = emotions[counters['o300_count']]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
+    response = requests.post(digitransitURL, json={'query': query}, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        alerts = data['data']['alerts']
+        for i, alert in enumerate(alerts):
+            print("",alert['alertDescriptionText'])
     if int(station_counter) >= ceil(counters['m100_count'])+ceil(counters['m200_count'])+ceil(counters['m300_count']) and int(runtime.total_seconds())>1:
         print(" ALL TRAFFIC IS STOPPED")
-    #print(" NO TRAFFIC LAS-KP")
-
 
 def update_vehicle_table():
     while True:
         timetable = check_timetable()
-        #timetable = "HÄTÄ" 
         print_vehicle_table()
         time.sleep(1)
 
@@ -208,7 +219,7 @@ def on_message(client, userdata, message):
   
  
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
-        """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
+        """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS" # Häiriö
         if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
         if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
@@ -224,7 +235,6 @@ def on_message(client, userdata, message):
         if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure, seq
 
 timetable = check_timetable()
-#timetable = "HÄTÄ"
 client = mqtt.Client()
 client.on_message = on_message
 client.connect(broker, port)
