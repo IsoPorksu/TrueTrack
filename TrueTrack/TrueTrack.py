@@ -12,7 +12,7 @@ last_message, start_time, vehicles, friends, last_etas = time.time(), datetime.n
 digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
 API_KEY = "5442e22683ae4d7ba9dc5149b51daa2e"
 HEADERS = {"Content-Type": "application/json", "digitransit-subscription-key": API_KEY}
-broker, port, topic = "mqtt.hsl.fi", 1883, "/hfp/v2/journey/ongoing/vp/metro/#"
+broker, port, topic = "mqtt.hsl.fi", 8883, "/hfp/v2/journey/ongoing/vp/metro/#"
 QUERY = '{alerts(route:"HSL:31M2"){alertDescriptionText}}'
 
 # Load data
@@ -147,7 +147,7 @@ def print_vehicle_table():
     print(" ----|-------------------|------------|-----|----|-----")
     total_m2 = counters['mm'] + counters['tap']
     total_m1 = counters['vs'] + counters['kil']
-    print(f" {sum(ceil(counters[k]) for k in ['m100_count', 'm200_count', 'm300_count', 'o300_count']):<4}| {ceil(total_m1):<2}xM1       {ceil(total_m2):>2}xM2 | {ceil(counters['vs']):<2} {ceil(counters['mm'])}  {ceil(counters['tap'])} {ceil(counters['kil']):<2} |     |    |")
+    print(f" {sum(ceil(counters[k]) for k in ['m100_count', 'm200_count', 'm300_count', 'o300_count']):<4}| {ceil(total_m1):<2}xM1       {ceil(total_m2):>2}xM2 | {ceil(counters['vs']):<2} {ceil(counters['mm'])}  {ceil(counters['tap'])} {ceil(counters['kil']):>2} |     |    |")
     # Train types and emotion
     emotion = [":D", ":)", ":|", ":(", ":C", ">:("][int(counters['o300_count'])]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
