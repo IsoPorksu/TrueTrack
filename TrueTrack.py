@@ -1,5 +1,5 @@
-# TrueTrack v8.5
-import json, threading, time, platform, paho.mqtt.client as mqtt
+# TrueTrack v9
+import json, threading, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
@@ -11,10 +11,18 @@ start_time = datetime.now()
 vehicles = {}
 friends = {}
 last_etas = {}
+digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
+API_KEY = my_secret = "5442e22683ae4d7ba9dc5149b51daa2e"
+headers = {"Content-Type": "application/json", "digitransit-subscription-key": API_KEY}
 broker = "mqtt.hsl.fi"
 port = 1883
 topic = "/hfp/v2/journey/ongoing/vp/metro/#"
 distance = 0
+query = """{
+  alerts (route: "HSL:31M2") {
+    alertDescriptionText
+  }
+}"""
 with open('metro_coords.json', 'r') as file:
     coords = json.load(file)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
@@ -63,15 +71,13 @@ def eta_maker(pos):
     try:
         pos = int(pos)
         eta = int(ceil(pos * 0.75))+1
-    except ValueError:
-        eta = ""
+    except ValueError: eta = ""
     return str(eta)
     
 def findDayNumber(day):
     date_obj = datetime.strptime(day, "%Y-%m-%d")
     day_of_week = date_obj.isoweekday()
-    if day_of_week in range (1,5):
-        day_of_week = 0
+    if day_of_week in range (1,5): day_of_week = 0
     return day_of_week
 
 def check_timetable():
@@ -79,31 +85,32 @@ def check_timetable():
     timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
-    #timetable = "HÄTÄ"
+    #timetable = "HÄTÄ" # Häiriö
     return timetable
 
 def print_maker(car, station, next, eta, destination, speed, departure, seq):
-    if car < 299 and seq == 1: car = "^"+str(car)
-    else: car = " " + str(car)
-    if car in (131, 320):
-        car = str(car)+"*"
-    if car in (129, 169):
-        car = str(car)+","
-    if car in (141, 179):
-        car = str(car)+"'"
-    if car in (000, 135):
-        car = str(car)+"+"
-    if car in (000, 155):
-        car = str(car)+"-"
+    if car < 299 and seq == 1: new_car = "^"+str(car)
+    else: new_car = " " + str(car)
+    if car in (131, 320): new_car = str(new_car)+"*" # Special (motors/straphangers)
+    if car in (129, 169): new_car = str(new_car)+"," # Ex-automated
+    if car in (141, 179): new_car = str(new_car)+"'" # Adverts
+    if car in (000, 135): new_car = str(new_car)+"+" # Joel likes
+    if car in (000, 155): new_car = str(new_car)+"-" # Joel dislikes
     if next and eta:
-        print(f"{car:<5}| {station:>4} -> {next:<4}{eta:>4}s | {destination:<11}|", end="")
+        print(f"{new_car:<5}| {station:>4} -> {next:<4}{eta:>4}s | {destination:<11}|", end="")
     elif next:
-        print(f"{car:<5}| {station:>4} -> {next:<4}    | {destination:<11}|", end="")
+        print(f"{new_car:<5}| {station:>4} -> {next:<4}    | {destination:<11}|", end="")
     else:
-        print(f"{car:<5}| {station:>4}              | {destination:<11}|", end="")
-    car = int(str(car)[1:4])
+        print(f"{new_car:<5}| {station:>4}              | {destination:<11}|", end="")
     friend = friends.get(car, "")
+    if friend in (131, 320): friend = str(friend)+"*"
+    if friend in (129, 169): friend = str(friend)+","
+    if friend in (141, 179): friend = str(friend)+"'"
+    if friend in (000, 135): friend = str(friend)+"+"
+    if friend in (000, 155): friend = str(friend)+"-"
     if car < 299 and seq == 2: friend = "^"+str(friend)
+
+
     else: friend = " " + str(friend)
     if speed not in ["0", 0] and next:
         print(f"{friend:<5}| {speed:>2} | {departure}" if friend else f"     | {speed:>2} | {departure}")
@@ -115,6 +122,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq):
 
 
 def print_vehicle_table():
+    response = requests.post(digitransitURL, json={'query': query}, headers=headers)
     station_counter = 0
     sync_friends()
     my_keys = sorted(vehicles.keys())
@@ -157,15 +165,17 @@ def print_vehicle_table():
     emotions = [":D", ":)", ":|", ":(", ":C", ">:("]
     emotion = emotions[counters['o300_count']]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
+    if response.status_code == 200:
+        data = response.json()
+        alerts = data['data']['alerts']
+        for i, alert in enumerate(alerts):
+            print(alert['alertDescriptionText'])
     if int(station_counter) >= ceil(counters['m100_count'])+ceil(counters['m200_count'])+ceil(counters['m300_count']) and int(runtime.total_seconds())>1:
         print(" ALL TRAFFIC IS STOPPED")
-    #print(" NO TRAFFIC LAS-KP")
-
 
 def update_vehicle_table():
     while True:
         timetable = check_timetable()
-        #timetable = "HÄTÄ" 
         print_vehicle_table()
         time.sleep(1)
 
@@ -208,7 +218,7 @@ def on_message(client, userdata, message):
   
  
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
-        """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
+        """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS" # Häiriö
         if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
         if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
@@ -224,7 +234,6 @@ def on_message(client, userdata, message):
         if vehicle_number == 203: vehicles[219] = current, next, eta, track, destination, speed, departure, seq
 
 timetable = check_timetable()
-#timetable = "HÄTÄ"
 client = mqtt.Client()
 client.on_message = on_message
 client.connect(broker, port)
