@@ -114,7 +114,7 @@ def print_vehicle_table():
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
             station_counter =+1
-    # Clear console for Linux
+    # Clear console on Linux/Android
     if platform.system() == "Linux":
         system('clear')
     # Runtime and status info
@@ -203,7 +203,7 @@ def on_message(client, userdata, message):
         if vuoro == 'Unknown':
             if car in vehicles:
                 vuoro = vehicles[car][-1]
-        if car in vehicles and eta != '' and vehicles[car][2] != '':
+        if car in vehicles and eta != "" and vehicles[car][2] != "":
             if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
                 eta=""
                 current, next = next, current
