@@ -187,7 +187,7 @@ def on_message(client, userdata, message):
         #last_etas[car] = eta
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
-        if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:30", "%H:%M"): # if it leaves TAP after 20:30 then it will become an M2A
+        if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M"): # if it leaves TAP after 20:15 then it will become an M2A
             if destination == "    TAP":
                 destination = "       KIL"
         elif (dep, timetable) in m2as and destination == "    TAP":
