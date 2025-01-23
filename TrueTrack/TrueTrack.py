@@ -226,11 +226,24 @@ def save_vuoro_list():
         
         # Format new data
         for car in vehicles:
-            if vehicles[car][-1] != 'Unknown': vuoros[vehicles[car][-1]] = car
+            if vehicles[car][-1] != 'Unknown':
+                vuoros[vehicles[car][-1]] = car, 0
+                if car in friends: vuoros[vehicles[car][-1]] = car, friends[car]
         combined = {**existing, **vuoros}
-        sorted_list = dict(sorted(combined.items(), key=lambda x: int(x[0])))
-        with file.open('w') as f: json.dump(sorted_list, f, indent=4)
-        time.sleep(5) # Repeat every 5s
+        sorted_data = dict(sorted(combined.items(), key=lambda x: int(x[0])))
+        with file.open('w') as f:
+            f.write("{\n")
+            for idx, (key, value) in enumerate(sorted_data.items()):
+                value = sorted(value)
+                if 0 in value:
+                    value.remove(0)
+                    value.append(0)
+                line = f'    "{key}": {json.dumps(value)}'
+                if idx < len(sorted_data) - 1:
+                    line += ","
+                f.write(line + "\n")
+            f.write("}\n")
+        time.sleep(5)
 
 
 timetable = check_timetable()
