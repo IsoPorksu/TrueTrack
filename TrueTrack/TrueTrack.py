@@ -4,9 +4,10 @@ from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
 from pytz import timezone
+from pathlib import Path
 
 # Globals
-last_message, start_time, vehicles, friends, last_etas = time.time(), datetime.now(), {}, {}, {}
+last_message, start_time, vehicles, friends, vuoros = time.time(), datetime.now(), {}, {}, {}
 
 # Constants
 digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
@@ -16,11 +17,13 @@ broker, port, topic = "mqtt.hsl.fi", 1883, "/hfp/v2/journey/ongoing/vp/metro/#" 
 QUERY = '{alerts(route:"HSL:31M2"){alertDescriptionText}}'
 
 # Load data
-with open('TrueTrack/metro_coords.json', 'r') as file:
-    coords = json.load(file)
+if platform.system() == "Linux":
+    with open('metro_coords.json', 'r') as f: coords = json.load(f)
+    with open('special_timetables.json', 'r') as f: specials = json.load(f)
+else:
+    with open('TrueTrack/metro_coords.json', 'r') as f: coords = json.load(f)
+    with open('TrueTrack/special_timetables.json', 'r') as f: specials = json.load(f)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
-with open('TrueTrack/special_timetables.json', 'r') as file:
-    specials = json.load(file)
 
 # Service times (M2)
 m2as = [("04:57", "T"), ("04:57", "P"), ("17:12", "T"), ("17:13", "P"), ("21:00", "T"),
@@ -74,7 +77,7 @@ def check_timetable():
     timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
-    #timetable = "HÄTÄ" # Häiriö
+    #timetable = "HÄTÄ" # Häiriö - this wil also change the vuoro list dumping!
     return timetable
 
 def print_maker(car, station, next, eta, destination, speed, departure, seq, vuoro):
@@ -182,7 +185,7 @@ def on_message(client, userdata, message):
         elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
         elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
         eta = eta_maker(pos)
-        last_etas[car] = eta
+        #last_etas[car] = eta
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
         if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:30", "%H:%M"): # if it leaves TAP after 20:30 then it will become an M2A
@@ -211,16 +214,35 @@ def on_message(client, userdata, message):
         vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 
+def save_vuoro_list():
+    time.sleep(2)
+    while True: # Open old data
+        current_date = datetime.now().strftime("%d%m%y")
+        if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
+        else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+        if file.exists():
+            with file.open('r') as f: existing = json.load(f)
+        else: existing = {}
+        
+        # Format new data
+        for car in vehicles:
+            if vehicles[car][-1] != 'Unknown': vuoros[vehicles[car][-1]] = car
+        combined = {**existing, **vuoros}
+        sorted_list = dict(sorted(combined.items(), key=lambda x: int(x[0])))
+        with file.open('w') as f: json.dump(sorted_list, f, indent=4)
+        time.sleep(5) # Repeat every 5s
+
+
 timetable = check_timetable()
 client = mqtt.Client()
 client.on_message = on_message
 client.connect(broker, port)
 client.subscribe(topic)
 threading.Thread(target=update_vehicle_table, daemon=True).start()
+threading.Thread(target=save_vuoro_list, daemon=True).start()
 client.loop_start()
 stop_event = threading.Event()
-try:
-    stop_event.wait()
+try: stop_event.wait()
 except KeyboardInterrupt:
     client.loop_stop()
     client.disconnect()
