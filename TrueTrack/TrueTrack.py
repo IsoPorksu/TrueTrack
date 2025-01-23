@@ -1,5 +1,5 @@
 # TrueTrack v10 (22.1.25)
-import json, threading, time, platform, requests, paho.mqtt.client as mqtt
+import asyncio, json, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
@@ -72,13 +72,13 @@ def eta_maker(pos):
     except ValueError: eta = ""
     return str(eta)
     
-def check_timetable():
+async def check_timetable():
+    global timetable
     date = (datetime.now(timezone("Europe/Helsinki")) - timedelta(hours=3)).date()
     timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
-    #timetable = "HÄTÄ" # Häiriö - this wil also change the vuoro list dumping!
-    return timetable
+    await asyncio.sleep(1)
 
 def print_maker(car, station, next, eta, destination, speed, departure, seq, vuoro):
     if car < 299 and seq == 1: new_car = "^"+str(car)
@@ -123,7 +123,7 @@ def print_vehicle_table():
     # Runtime and status info
     runtime = datetime.now() - start_time
     now = datetime.now(timezone("Europe/Helsinki"))
-    print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {check_timetable()}")
+    print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {timetable}")
     print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro")
     print(" ----|-------------------|------------|-----|----|-----")
     # Counters and mappings
@@ -164,11 +164,10 @@ def print_vehicle_table():
         print(" ALL TRAFFIC IS STOPPED")
 
 
-def update_vehicle_table():
+async def update_vehicle_table():
     while True:
-        timetable = check_timetable()
         print_vehicle_table()
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 def on_message(client, userdata, message):
     global last_message
@@ -214,8 +213,8 @@ def on_message(client, userdata, message):
         vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 
-def save_vuoro_list():
-    time.sleep(2)
+async def export_vuoro():
+    await asyncio.sleep(2)
     while True: # Open old data
         current_date = datetime.now().strftime("%d%m%y")
         if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
@@ -243,19 +242,20 @@ def save_vuoro_list():
                     line += ","
                 f.write(line + "\n")
             f.write("}\n")
-        time.sleep(5)
+        await asyncio.sleep(5)
 
+async def main():
+    await check_timetable()
+    client = mqtt.Client()
+    client.on_message = on_message
+    client.connect(broker, port)
+    client.subscribe(topic)
+    client.loop_start()
+    await asyncio.gather(update_vehicle_table(), export_vuoro(), check_timetable())
+    stop_event = asyncio.Event()
+    try: stop_event.wait()
+    except KeyboardInterrupt:
+        client.loop_stop()
+        client.disconnect()
 
-timetable = check_timetable()
-client = mqtt.Client()
-client.on_message = on_message
-client.connect(broker, port)
-client.subscribe(topic)
-threading.Thread(target=update_vehicle_table, daemon=True).start()
-threading.Thread(target=save_vuoro_list, daemon=True).start()
-client.loop_start()
-stop_event = threading.Event()
-try: stop_event.wait()
-except KeyboardInterrupt:
-    client.loop_stop()
-    client.disconnect()
+asyncio.run(main())
