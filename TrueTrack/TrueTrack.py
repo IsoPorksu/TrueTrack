@@ -1,4 +1,4 @@
-# TrueTrack v10 (22.1.25)
+# TrueTrack v10.2 (24.1.25)
 import asyncio, json, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -167,7 +167,7 @@ def print_vehicle_table():
 async def update_vehicle_table():
     while True:
         print_vehicle_table()
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.75)
 
 def on_message(client, userdata, message):
     global last_message
@@ -242,7 +242,7 @@ async def export_vuoro():
                     line += ","
                 f.write(line + "\n")
             f.write("}\n")
-        await asyncio.sleep(5)
+        await asyncio.sleep(11)
 
 async def main():
     await check_timetable()
