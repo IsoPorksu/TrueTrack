@@ -105,7 +105,6 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if friend in (000, 155): friend = str(friend)+"-"
     if car < 299 and seq == 2: friend = "^"+str(friend)
 
-
     else: friend = " " + str(friend)
     if speed not in ["0", 0] and next:
         string += f"{friend:<5}| {speed:>2} | " if friend else f"     | {speed:>2} | "
