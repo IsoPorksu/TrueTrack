@@ -1,4 +1,4 @@
-# TrueTrack v10.2 (24.1.25)
+# TrueTrack v10.4 (25.1.25)
 import asyncio, json, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
