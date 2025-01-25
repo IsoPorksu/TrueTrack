@@ -7,12 +7,14 @@ from pytz import timezone
 from pathlib import Path
 
 # Globals
+global last_message, start_time, vehicles, friends, vuoros, session
 last_message, start_time, vehicles, friends, vuoros = time.time(), datetime.now(), {}, {}, {}
 
-# Constants
+# Fancy stuff
+session = requests.Session()
 digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
 API_KEY = "5442e22683ae4d7ba9dc5149b51daa2e"
-HEADERS = {"Content-Type": "application/json", "digitransit-subscription-key": API_KEY}
+session.headers.update({"Content-Type": "application/json", "digitransit-subscription-key": API_KEY})
 broker, port, topic = "mqtt.hsl.fi", 1883, "/hfp/v2/journey/ongoing/vp/metro/#" # Port 8883 does not work
 QUERY = '{alerts(route:"HSL:31M2"){alertDescriptionText}}'
 
@@ -38,6 +40,12 @@ destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M
 
 
 ##############################################  
+
+def clear():
+    if platform.system() == "Linux":
+        system('clear')
+    elif platform.system() == "Windows":
+        system('cls')
 
 def check_friends(filtered_vehicles):
     taken = []
@@ -87,9 +95,9 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if car in (141, 179): new_car = str(new_car)+"'" # Adverts
     if car in (000, 135): new_car = str(new_car)+"+" # Joel likes
     if car in (000, 155): new_car = str(new_car)+"-" # Joel dislikes
-    print(f"{new_car:<5}| {station:>4} ", end="")
-    if next: print(f"-> {next:<4}{eta:>4}s | {destination:<11}|", end="")
-    else: print(f"             | {destination:<11}|", end="")
+    string = f"{new_car:<5}| {station:>4} "
+    if next: string += f"-> {next:<4}{eta:>4}s | {destination:<11}|"
+    else: string += f"             | {destination:<11}|"
     friend = friends.get(car, "")
     if friend in (131, 320): friend = str(friend)+"*"
     if friend in (141, 179): friend = str(friend)+"'"
@@ -100,32 +108,34 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
 
     else: friend = " " + str(friend)
     if speed not in ["0", 0] and next:
-        print(f"{friend:<5}| {speed:>2} | " if friend else f"     | {speed:>2} | ", end ="")
-    else: print(f"{friend:<5}|    | " if friend else f"     |    | ", end="")
-    if vuoro == 'Unknown': print(departure)
-    else: print(timetable+vuoro)
+        string += f"{friend:<5}| {speed:>2} | " if friend else f"     | {speed:>2} | "
+    else: string += f"{friend:<5}|    | " if friend else f"     |    | "
+    if vuoro == 'Unknown': string += departure
+    else: string += timetable+vuoro
     
     track = station[-1] if station.endswith(("1", "2")) else ""
     vehicles[car] = station, next, eta, track, destination, speed, departure, seq, vuoro
+    print_list.append(string)
 
+async def fetch_alerts():
+    try:
+        response = session.post(digitransitURL, json={'query': QUERY})
+        if response.status_code == 200:
+            for alert in response.json().get('data', {}).get('alerts', []):
+                print(f" {alert['alertDescriptionText']}")
+        else:
+            print(f" Error fetching alerts: HTTP {response.status_code}")
+    except requests.exceptions.RequestException:
+        print(" No internet, retrying...")
 
-def print_vehicle_table():
-    # Prints a formatted vehicle status table with runtime, ping, and alerts.
-    station_counter = 0
-    response = requests.post(digitransitURL, json={'query': QUERY}, headers=HEADERS)
+async def print_vehicle_table():
+    global print_list, session
+    print_list, station_counter = [], 0
     sync_friends()
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
-            station_counter =+1
-    # Clear console on Linux/Android
-    if platform.system() == "Linux":
-        system('clear')
-    # Runtime and status info
-    runtime = datetime.now() - start_time
-    now = datetime.now(timezone("Europe/Helsinki"))
-    print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {timetable}")
-    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro")
-    print(" ----|-------------------|------------|-----|----|-----")
+            station_counter += 1
+    clear()
     # Counters and mappings
     counters = {key: 0 for key in ['vs', 'mm', 'tap', 'kil', 'm100_count', 'm200_count', 'm300_count', 'o300_count']}
     vehicle_ranges = [
@@ -146,28 +156,32 @@ def print_vehicle_table():
         if destination in dest_map:
             counters[dest_map[destination]] += stock
 
-    # Summary line
+    # Printing time!
+    runtime = datetime.now() - start_time
+    now = datetime.now(timezone("Europe/Helsinki"))
+    print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {timetable}")
+    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro")
     print(" ----|-------------------|------------|-----|----|-----")
+    for item in print_list: print(item)
+    print(" ----|-------------------|------------|-----|----|-----")
+
     total_m2 = counters['mm'] + counters['tap']
     total_m1 = counters['vs'] + counters['kil']
     o = str(ceil(total_m1))+"xM1"
     print(f" {sum(ceil(counters[k]) for k in ['m100_count', 'm200_count', 'm300_count', 'o300_count']):<4}| {o:<5}       {ceil(total_m2):>2}xM2 | {ceil(counters['vs']):<2} {ceil(counters['mm'])}  {ceil(counters['tap'])} {ceil(counters['kil']):>2} |     |    |")
     # Train types and emotion
-    emotion = [":D", ":)", ":|", ":(", ":C", ">:("][int(counters['o300_count'])]
+    emotion = [":D", ":(", ":(", ":C", ">:(", ">:C"][int(counters['o300_count'])]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
-    # Alerts
-    if response.status_code == 200:
-        for alert in response.json().get('data', {}).get('alerts', []):
-            print(alert['alertDescriptionText'])
-    # Traffic status
-    if station_counter >= sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) > 0 and runtime.total_seconds() > 1:
-        print(" ALL TRAFFIC IS STOPPED")
+    await fetch_alerts()
 
+    # Traffic status
+    if station_counter >= sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) and runtime.total_seconds() > 3:
+        print(" ALL TRAFFIC IS STOPPED")
 
 async def update_vehicle_table():
     while True:
-        print_vehicle_table()
-        await asyncio.sleep(0.75)
+        await print_vehicle_table()
+        await asyncio.sleep(1)
 
 def on_message(client, userdata, message):
     global last_message
@@ -210,45 +224,72 @@ def on_message(client, userdata, message):
             if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
                 eta=""
                 current, next = next, current
+        dep_time = datetime.strptime(dep, "%H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
+        current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
+
+        try:
+            current_date = datetime.now().strftime("%d%m%y")
+            if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
+            else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+            if file.exists():
+                with file.open('r') as f: vuoro_list = json.load(f)
+            else: vuoro_list = {}
+        except Exception as e:
+            print(f" JSON fetch error: {e}")
+        for found_vuoro, car_list in vuoro_list.items():
+            if car in car_list: vuoro = found_vuoro
+        # Check if dep_time is within the past 2 hours
+        #if (current_time - timedelta(hours=2)) <= dep_time <= current_time:
         vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 
 async def export_vuoro():
     await asyncio.sleep(2)
     while True: # Open old data
-        current_date = datetime.now().strftime("%d%m%y")
-        if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
-        else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
-        if file.exists():
-            with file.open('r') as f: existing = json.load(f)
-        else: existing = {}
-        
-        # Format new data
-        for car in vehicles:
-            if vehicles[car][-1] != 'Unknown':
-                vuoros[vehicles[car][-1]] = car, 0
-                if car in friends: vuoros[vehicles[car][-1]] = car, friends[car]
-        combined = {**existing, **vuoros}
-        sorted_data = dict(sorted(combined.items(), key=lambda x: int(x[0])))
-        with file.open('w') as f:
-            f.write("{\n")
-            for idx, (key, value) in enumerate(sorted_data.items()):
-                value = sorted(value)
-                if 0 in value:
-                    value.remove(0)
-                    value.append(0)
-                line = f'    "{key}": {json.dumps(value)}'
-                if idx < len(sorted_data) - 1:
-                    line += ","
-                f.write(line + "\n")
-            f.write("}\n")
-        await asyncio.sleep(11)
+        try:
+            current_date = datetime.now().strftime("%d%m%y")
+            if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
+            else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+            if file.exists():
+                with file.open('r') as f: existing = json.load(f)
+            else: existing = {}
+            
+            # Format new data
+            for car in vehicles:
+                if vehicles[car][-1] != 'Unknown':
+                    vuoros[vehicles[car][-1]] = car, 0
+                    if car in friends: vuoros[vehicles[car][-1]] = car, friends[car]
+            combined = {**existing, **vuoros}
+            sorted_data = dict(sorted(combined.items(), key=lambda x: int(x[0])))
+            with file.open('w') as f:
+                f.write("{\n")
+                for idx, (key, value) in enumerate(sorted_data.items()):
+                    value = sorted(value)
+                    if 0 in value:
+                        value.remove(0)
+                        value.append(0)
+                    line = f'    "{key}": {json.dumps(value)}'
+                    if idx < len(sorted_data) - 1:
+                        line += ","
+                    f.write(line + "\n")
+                f.write("}\n")
+            await asyncio.sleep(11)
+        except Exception as e:
+            print(f" JSON dumping error: {e}")
+            break
 
 async def main():
     await check_timetable()
     client = mqtt.Client()
     client.on_message = on_message
-    client.connect(broker, port)
+    while True:
+        try:
+            client.connect(broker, port)
+            break
+        except Exception as e:
+            clear()
+            print(f" Connection error: {e}. Retrying...")
+            time.sleep(1)
     client.subscribe(topic)
     client.loop_start()
     await asyncio.gather(update_vehicle_table(), export_vuoro(), check_timetable())
@@ -257,5 +298,6 @@ async def main():
     except KeyboardInterrupt:
         client.loop_stop()
         client.disconnect()
+        session.close()
 
 asyncio.run(main())
