@@ -235,7 +235,7 @@ def on_message(client, userdata, message):
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
-        if (current_time - timedelta(hours=2)) <= dep_time <= current_time:
+        if (current_time - timedelta(hours=2)) <= dep_time <= (current_time + timedelta(minutes=30)):
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
