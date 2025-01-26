@@ -1,4 +1,4 @@
-# TrueTrack v10.4 (25.1.25)
+# TrueTrack v10.5 (26.1.25)
 import asyncio, json, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -181,7 +181,7 @@ def on_message(client, userdata, message):
     global last_message
     last_message = time.time()
     data = json.loads(message.payload.decode())
-    line, car, vuoro, dep, seq, day, lat, lon = data.get('VP', {}).get('desi', 'Unknown'), data.get('VP', {}).get('veh', 'Unknown'), data.get('VP', {}).get('line', 'Unknown'), data.get('VP', {}).get('start', 'Unknown'), data.get('VP', {}).get('seq', 'Unknown'), data.get('VP', {}).get('oday', 'Unknown'), data.get('VP', {}).get('lat', 'Unknown'), data.get('VP', {}).get('long', 'Unknown'), 
+    dir, line, car, vuoro, dep, seq, day, lat, lon = data.get('VP', {}).get('dir', 1), data.get('VP', {}).get('desi', 'Unknown'), data.get('VP', {}).get('veh', 'Unknown'), data.get('VP', {}).get('line', 'Unknown'), data.get('VP', {}).get('start', 'Unknown'), data.get('VP', {}).get('seq', 'Unknown'), data.get('VP', {}).get('oday', 'Unknown'), data.get('VP', {}).get('lat', 'Unknown'), data.get('VP', {}).get('long', 'Unknown'), 
     speed = str(ceil(data.get('VP', {}).get('spd', 62.5) * 3.6))
 
     if (lat, lon) in coordinates:
@@ -208,6 +208,10 @@ def on_message(client, userdata, message):
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
         if next == "VS1" and int(eta) < 60 and int(speed) < 36:
             next == "VS2"
+        if dir == "1" and track == "2":
+            #print(car)
+            if car<300 and seq == 1: seq = 2
+            elif car<300 and seq == 2: seq = 1
         
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
