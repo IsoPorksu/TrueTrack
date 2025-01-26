@@ -6,11 +6,9 @@ from datetime import datetime, timezone, timedelta
 from pytz import timezone
 from pathlib import Path
 
-# Globals
 global last_message, start_time, vehicles, friends, vuoros, session
 last_message, start_time, vehicles, friends, vuoros = time.time(), datetime.now(), {}, {}, {}
 
-# Fancy stuff
 session = requests.Session()
 digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
 API_KEY = "5442e22683ae4d7ba9dc5149b51daa2e"
@@ -18,7 +16,7 @@ session.headers.update({"Content-Type": "application/json", "digitransit-subscri
 broker, port, topic = "mqtt.hsl.fi", 1883, "/hfp/v2/journey/ongoing/vp/metro/#" # Port 8883 does not work
 QUERY = '{alerts(route:"HSL:31M2"){alertDescriptionText}}'
 
-# Load data
+# Load JSON data
 if platform.system() == "Linux":
     with open('metro_coords.json', 'r') as f: coords = json.load(f)
     with open('special_timetables.json', 'r') as f: specials = json.load(f)
@@ -37,7 +35,6 @@ m2as = [("04:57", "T"), ("04:57", "P"), ("17:12", "T"), ("17:13", "P"), ("21:00"
 
 # Destinations
 destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M2", 2): "    TAP"}
-
 
 ##############################################  
 
@@ -135,7 +132,6 @@ async def print_vehicle_table():
     if next == "":
             station_counter += 1
     clear()
-    # Counters and mappings
     counters = {key: 0 for key in ['vs', 'mm', 'tap', 'kil', 'm100_count', 'm200_count', 'm300_count', 'o300_count']}
     vehicle_ranges = [
         (range(200), 'm100_count', 0.5),
@@ -155,7 +151,6 @@ async def print_vehicle_table():
         if destination in dest_map:
             counters[dest_map[destination]] += stock
 
-    # Printing time!
     runtime = datetime.now() - start_time
     now = datetime.now(timezone("Europe/Helsinki"))
     print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {timetable}")
@@ -238,9 +233,10 @@ def on_message(client, userdata, message):
         for found_vuoro, car_list in vuoro_list.items():
             if car in car_list: vuoro = found_vuoro
         # Check if dep_time is within the past 2 hours
-        #if (current_time - timedelta(hours=2)) <= dep_time <= current_time:
-        vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
-
+        dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
+        current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
+        if (current_time - timedelta(hours=2)) <= dep_time <= current_time:
+            vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
     await asyncio.sleep(2)
