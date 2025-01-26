@@ -5,6 +5,7 @@ from math import *
 from datetime import datetime, timezone, timedelta
 from pytz import timezone
 from pathlib import Path
+from asyncio import sleep
 
 global last_message, start_time, vehicles, friends, vuoros, session
 last_message, start_time, vehicles, friends, vuoros = time.time(), datetime.now(), {}, {}, {}
@@ -30,8 +31,7 @@ m2as = [("04:57", "T"), ("04:57", "P"), ("17:12", "T"), ("17:13", "P"), ("21:00"
         ("21:00", "P"), ("04:49", "L"), ("05:04", "L"), ("05:19", "L"), ("05:34", "L"),
         ("05:46", "L"), ("06:01", "L"), ("05:33", "L"), ("05:48", "L"), ("06:03", "L"),
         ("06:18", "L"), ("06:33", "L"), ("06:48", "L"), ("07:03", "L"), ("05:49", "L"),
-        ("06:00", "S"), ("19:40", "S"), ("20:15", "S"), ("20:30", "S"), ("20:45", "S"),
-        ("21:00", "S")]
+        ("05:49", "S"), ("18:59", "S"), ("19:29", "S"), ("19:49", "S"), ("19:59", "S")]
 
 # Destinations
 destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M2", 2): "    TAP"}
@@ -83,7 +83,7 @@ async def check_timetable():
     timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
-    await asyncio.sleep(1)
+    await sleep(1)
 
 def print_maker(car, station, next, eta, destination, speed, departure, seq, vuoro):
     if car < 299 and seq == 1: new_car = "^"+str(car)
@@ -175,7 +175,7 @@ async def print_vehicle_table():
 async def update_vehicle_table():
     while True:
         await print_vehicle_table()
-        await asyncio.sleep(1)
+        await sleep(1)
 
 def on_message(client, userdata, message):
     global last_message
@@ -243,7 +243,7 @@ def on_message(client, userdata, message):
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
-    await asyncio.sleep(2)
+    await sleep(2)
     while True: # Open old data
         try:
             current_date = (datetime.now()-timedelta(hours=4.5)).strftime("%d%m%y")
@@ -272,15 +272,25 @@ async def export_vuoro():
                         line += ","
                     f.write(line + "\n")
                 f.write("}\n")
-            await asyncio.sleep(11)
+            await sleep(11)
         except Exception as e:
             print(f" JSON dumping error: {e}")
             break
+
+def on_disconnect(client, userdata, rc):
+    if rc != 0:
+        while True:
+            print("Disconnected. Reconnecting...")
+            client.connect(broker, port)
+            client.subscribe(topic)
+            sleep(1)
 
 async def main():
     await check_timetable()
     client = mqtt.Client()
     client.on_message = on_message
+    client.on_disconnect = on_disconnect
+    client.reconnect_delay_set(min_delay=1, max_delay=2)
     while True:
         try:
             client.connect(broker, port)
@@ -293,10 +303,5 @@ async def main():
     client.loop_start()
     await asyncio.gather(update_vehicle_table(), export_vuoro(), check_timetable())
     stop_event = asyncio.Event()
-    try: stop_event.wait()
-    except KeyboardInterrupt:
-        client.loop_stop()
-        client.disconnect()
-        session.close()
 
 asyncio.run(main())
