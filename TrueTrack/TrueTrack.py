@@ -8,9 +8,7 @@ from pathlib import Path
 from asyncio import sleep
 
 global last_message, start_time, vehicles, friends, vuoros, session
-last_message, start_time, vehicles, friends, vuoros = time.time(), datetime.now(), {}, {}, {}
-
-session = requests.Session()
+last_message, start_time, vehicles, friends, vuoros, session, last_etas = time.time(), datetime.now(), {}, {}, {}, requests.Session(), {}
 digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
 API_KEY = "5442e22683ae4d7ba9dc5149b51daa2e"
 session.headers.update({"Content-Type": "application/json", "digitransit-subscription-key": API_KEY})
@@ -108,7 +106,6 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     else: string += f"{friend:<5}|    | " if friend else f"     |    | "
     if vuoro == 'Unknown': string += departure
     else: string += timetable+vuoro
-    
     track = station[-1] if station.endswith(("1", "2")) else ""
     vehicles[car] = station, next, eta, track, destination, speed, departure, seq, vuoro
     print_list.append(string)
@@ -128,6 +125,10 @@ async def print_vehicle_table():
     global print_list, session
     print_list, station_counter = [], 0
     sync_friends()
+    """for car in vehicles:
+        current, next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
+        if eta != "": eta=int(eta)-1
+        vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro"""
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
             station_counter += 1
@@ -143,7 +144,6 @@ async def print_vehicle_table():
         station, next_station, eta, _, destination, speed, departure, seq, vuoro = data
         eta = "" if eta in ["", "0"] else str(eta)
         print_maker(vehicle_number, station, next_station, eta, destination, speed, departure, seq, vuoro)
-        # Update counters
         stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
         for num_range, count_name, increment in vehicle_ranges:
             if vehicle_number in num_range:
@@ -163,11 +163,9 @@ async def print_vehicle_table():
     total_m1 = counters['vs'] + counters['kil']
     o = str(ceil(total_m1))+"xM1"
     print(f" {sum(ceil(counters[k]) for k in ['m100_count', 'm200_count', 'm300_count', 'o300_count']):<4}| {o:<5}       {ceil(total_m2):>2}xM2 | {ceil(counters['vs']):<2} {ceil(counters['mm'])}  {ceil(counters['tap'])} {ceil(counters['kil']):>2} |     |    |")
-    # Train types and emotion
     emotion = [":D", ":(", ":(", ":C", ">:(", ">:C"][int(counters['o300_count'])]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
     await fetch_alerts()
-
     # Traffic status
     if station_counter >= sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) and runtime.total_seconds() > 3:
         print(" ALL TRAFFIC IS STOPPED")
@@ -192,7 +190,7 @@ def on_message(client, userdata, message):
         elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
         elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
         eta = eta_maker(pos)
-        #last_etas[car] = eta
+        #if car == 133: print(eta)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
         if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M"): # if it leaves TAP after 20:15 then it will be an M2A
@@ -240,6 +238,11 @@ def on_message(client, userdata, message):
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
         if (current_time - timedelta(hours=2)) <= dep_time <= (current_time + timedelta(minutes=30)):
+            if car in last_etas:
+                if last_etas[car] == eta and car in vehicles:
+                    eta = vehicles[car][2] # If ETA hasn't changed, get it from the vehicles dict
+                if last_etas[car] != eta: last_etas[car] = eta
+            else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
