@@ -1,4 +1,4 @@
-# TrueTrack v10.7 (2.2.25)
+# Core Code v10.7 (2.2.25)
 import asyncio, json, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -20,8 +20,8 @@ if platform.system() == "Linux":
     with open('metro_coords.json', 'r') as f: coords = json.load(f)
     with open('special_timetables.json', 'r') as f: specials = json.load(f)
 else:
-    with open('TrueTrack/metro_coords.json', 'r') as f: coords = json.load(f)
-    with open('TrueTrack/special_timetables.json', 'r') as f: specials = json.load(f)
+    with open('Core Code/metro_coords.json', 'r') as f: coords = json.load(f)
+    with open('Core Code/special_timetables.json', 'r') as f: specials = json.load(f)
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
 
 # Service times (M2)
@@ -99,11 +99,11 @@ async def check_timetable():
     try:
         current_date = datetime.now().strftime("%d%m%y")
         if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
-        else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+        else: file = Path(f'Core Code/Vuoro Lists/vuoro_{current_date}{timetable}.json')
         if file.exists():
             with file.open('r') as f: vuoro_list = json.load(f)
         else:
-            url = f'https://raw.githubusercontent.com/IsoPorksu/TrueTrack/refs/heads/main/TrueTrack/Vuoro%20Lists/vuoro_{current_date}{timetable}.json'
+            url = f'https://raw.githubusercontent.com/IsoPorksu/Core Code/refs/heads/main/Core Code/Vuoro%20Lists/vuoro_{current_date}{timetable}.json'
             resp = requests.get(url)
             vuoro_list = json.loads(resp.text)
     except Exception as e:
@@ -272,7 +272,7 @@ async def export_vuoro():
         try:
             current_date = (datetime.now()-timedelta(hours=4.5)).strftime("%d%m%y")
             if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
-            else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+            else: file = Path(f'Core Code/Vuoro Lists/vuoro_{current_date}{timetable}.json')
             if file.exists():
                 with file.open('r') as f: existing = json.load(f)
             else: existing = {}
