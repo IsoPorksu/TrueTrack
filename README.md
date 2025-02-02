@@ -25,7 +25,7 @@ TrueTrack is intended for anyone passionate about the Helsinki metro system who 
 
 #### For users on other operating systems:
 I don't know; figure it out yourself.
--
+
 ## How do I read the TrueTrack display?
 The display will look something like this:
 ```Runtime: 4s  Ping: 138ms  Time: 20:50:32  Timetable: S
