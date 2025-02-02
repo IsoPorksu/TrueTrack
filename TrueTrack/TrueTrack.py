@@ -1,4 +1,4 @@
-# TrueTrack v10.5 (26.1.25)
+# TrueTrack v10.7 (2.2.25)
 import asyncio, json, time, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -41,12 +41,26 @@ def clear():
         system('clear')
     elif platform.system() == "Windows":
         system('cls')
+        
 
 def check_friends(filtered_vehicles):
     taken = []
     for vehicle_number, [current, next, eta, track, dest, speed, dep, seq, vuoro] in filtered_vehicles.items():
         for other_vehicle_number, [other_current, other_next, other_eta, other_track, other_dest, other_speed, other_dep, other_seq, other_vuoro] in filtered_vehicles.items():
             if other_vehicle_number != vehicle_number and (vehicle_number and other_vehicle_number) not in taken:
+                if vuoro == other_vuoro and vuoro!='Unknown':
+                    eta = 0 if eta == "" else int(eta)
+                    other_eta = 0 if other_eta == "" else int(other_eta)
+                    if eta < other_eta:
+                        vehicles[other_vehicle_number] = current, next, eta, track, dest, speed, dep, other_seq, vuoro
+                        friends[other_vehicle_number] = vehicle_number
+                        friends[vehicle_number] = other_vehicle_number
+                    else:
+                        vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed, other_dep, seq, other_vuoro
+                        friends[other_vehicle_number] = vehicle_number
+                        friends[vehicle_number] = other_vehicle_number
+                    taken.append(vehicle_number)
+                    taken.append(other_vehicle_number)                    
                 if track == other_track:
                     if (current == other_current or (current == other_next and next == "") or (next == other_current and other_next == "")) and dep == other_dep:
                         eta = 0 if eta == "" else int(eta)
@@ -62,6 +76,7 @@ def check_friends(filtered_vehicles):
                         taken.append(vehicle_number)
                         taken.append(other_vehicle_number)
 
+
 def sync_friends():
     filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 200}
     check_friends(filtered_vehicles)
@@ -76,11 +91,24 @@ def eta_maker(pos):
     return str(eta)
     
 async def check_timetable():
-    global timetable
+    global timetable, vuoro_list
     date = (datetime.now(timezone("Europe/Helsinki")) - timedelta(hours=3)).date()
     timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
+    try:
+        current_date = datetime.now().strftime("%d%m%y")
+        if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
+        else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+        if file.exists():
+            with file.open('r') as f: vuoro_list = json.load(f)
+        else:
+            url = f'https://raw.githubusercontent.com/IsoPorksu/TrueTrack/refs/heads/main/TrueTrack/Vuoro%20Lists/vuoro_{current_date}{timetable}.json'
+            resp = requests.get(url)
+            vuoro_list = json.loads(resp.text)
+    except Exception as e:
+        print(f" JSON fetch error: {e}")
+        vuoro_list={}
     await sleep(1)
 
 def print_maker(car, station, next, eta, destination, speed, departure, seq, vuoro):
@@ -102,12 +130,14 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
 
     else: friend = " " + str(friend)
     if speed not in ["0", 0] and next:
-        string += f"{friend:<5}| {speed:>2} | " if friend else f"     | {speed:>2} | "
-    else: string += f"{friend:<5}|    | " if friend else f"     |    | "
-    if vuoro == 'Unknown': string += departure
-    else: string += timetable+vuoro
-    track = station[-1] if station.endswith(("1", "2")) else ""
-    vehicles[car] = station, next, eta, track, destination, speed, departure, seq, vuoro
+        string += f"{friend:<5}| {speed:>2} |" if friend else f"     | {speed:>2} |"
+    else: string += f"{friend:<5}|    |" if friend else f"     |    |"
+    if vuoro[-1]=="x":
+        x="x"
+        vuoro=vuoro[:-1]
+    else: x=" "
+    if vuoro == 'Unknown': string += f"   {departure}"
+    else: string += f"{x}{timetable}{vuoro:<3}{departure[2:]}"
     print_list.append(string)
 
 async def fetch_alerts():
@@ -132,7 +162,6 @@ async def print_vehicle_table():
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
             station_counter += 1
-    clear()
     counters = {key: 0 for key in ['vs', 'mm', 'tap', 'kil', 'm100_count', 'm200_count', 'm300_count', 'o300_count']}
     vehicle_ranges = [
         (range(200), 'm100_count', 0.5),
@@ -153,16 +182,17 @@ async def print_vehicle_table():
 
     runtime = datetime.now() - start_time
     now = datetime.now(timezone("Europe/Helsinki"))
+    clear()
     print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {timetable}")
-    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro")
-    print(" ----|-------------------|------------|-----|----|-----")
+    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep")
+    print(" ----|-------------------|------------|-----|----|---------")
     for item in print_list: print(item)
-    print(" ----|-------------------|------------|-----|----|-----")
+    print(" ----|-------------------|------------|-----|----|---------")
 
     total_m2 = counters['mm'] + counters['tap']
     total_m1 = counters['vs'] + counters['kil']
     o = str(ceil(total_m1))+"xM1"
-    print(f" {sum(ceil(counters[k]) for k in ['m100_count', 'm200_count', 'm300_count', 'o300_count']):<4}| {o:<5}       {ceil(total_m2):>2}xM2 | {ceil(counters['vs']):<2} {ceil(counters['mm'])}  {ceil(counters['tap'])} {ceil(counters['kil']):>2} |     |    |")
+    print(f" {sum(ceil(counters[k]) for k in ['m100_count', 'm200_count', 'm300_count', 'o300_count']):<4}| {o:<5}       {ceil(total_m2):>2}xM2 |{ceil(counters['vs']):>2} {ceil(counters['mm']):>2} {ceil(counters['tap']):>2} {ceil(counters['kil']):>2} |     |    |")
     emotion = [":D", ":(", ":(", ":C", ">:(", ">:C"][int(counters['o300_count'])]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
     await fetch_alerts()
@@ -199,23 +229,20 @@ def on_message(client, userdata, message):
         elif (dep, timetable) in m2as and destination == "    TAP":
             destination = "       KIL" 
         if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
-        # Short-term dest fixing during disruption
+        # Short-term dest editing during disruption
         """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
         if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
         if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
-        if next == "VS1" and int(eta) < 60 and int(speed) < 36:
-            next == "VS2"
+        if next == "VS1" and int(eta) < 60 and int(speed) < 36: next == "VS2"
         if dir == "1" and track == "2":
-            #print(car)
             if car<300 and seq == 1: seq = 2
             elif car<300 and seq == 2: seq = 1
         
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
-        if vuoro == 'Unknown':
-            if car in vehicles:
-                vuoro = vehicles[car][-1]
+        if car in vehicles:
+            if vuoro == 'Unknown': vuoro = vehicles[car][-1]
         if car in vehicles and eta != "" and vehicles[car][2] != "":
             if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
                 eta=""
@@ -224,16 +251,10 @@ def on_message(client, userdata, message):
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
 
         try:
-            current_date = datetime.now().strftime("%d%m%y")
-            if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
-            else: file = Path(f'TrueTrack/Vuoro Lists/vuoro_{current_date}{timetable}.json')
-            if file.exists():
-                with file.open('r') as f: vuoro_list = json.load(f)
-            else: vuoro_list = {}
-        except Exception as e:
-            print(f" JSON fetch error: {e}")
-        for found_vuoro, car_list in vuoro_list.items():
-            if car in car_list: vuoro = found_vuoro
+            for found_vuoro, car_list in vuoro_list.items():
+                if car in car_list and not vuoro.endswith("x"):
+                    if vuoro=='Unknown': vuoro = f"{found_vuoro}x"
+        except Exception as e: print(f" JSON fetch error: {e}")
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
@@ -246,7 +267,7 @@ def on_message(client, userdata, message):
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
-    await sleep(2)
+    await sleep(10)
     while True: # Open old data
         try:
             current_date = (datetime.now()-timedelta(hours=4.5)).strftime("%d%m%y")
@@ -255,10 +276,9 @@ async def export_vuoro():
             if file.exists():
                 with file.open('r') as f: existing = json.load(f)
             else: existing = {}
-            
             # Format new data
             for car in vehicles:
-                if vehicles[car][-1] != 'Unknown':
+                if vehicles[car][-1] != 'Unknown' and vehicles[car][-1][-1] != "x":
                     vuoros[vehicles[car][-1]] = car, 0
                     if car in friends: vuoros[vehicles[car][-1]] = car, friends[car]
             combined = {**existing, **vuoros}
@@ -275,7 +295,7 @@ async def export_vuoro():
                         line += ","
                     f.write(line + "\n")
                 f.write("}\n")
-            await sleep(11)
+            await sleep(10)
         except Exception as e:
             print(f" JSON dumping error: {e}")
             break
@@ -290,7 +310,7 @@ def on_disconnect(client, userdata, rc):
 
 async def main():
     await check_timetable()
-    client = mqtt.Client()
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
     client.on_message = on_message
     client.on_disconnect = on_disconnect
     client.reconnect_delay_set(min_delay=1, max_delay=2)
