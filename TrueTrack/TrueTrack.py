@@ -137,7 +137,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
         vuoro=vuoro[:-1]
     else: x=" "
     if vuoro == 'Unknown': string += f"   {departure}"
-    else: string += f"{x}{timetable}{vuoro:<3}{departure[2:]}"
+    else: string += f"{x}{timetable}{vuoro:<3}{departure[1:]}"
     print_list.append(string)
 
 async def fetch_alerts():
