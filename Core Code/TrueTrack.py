@@ -1,4 +1,4 @@
-# Core Code v11 (3.2.25)
+# TrueTrack v11 (3.2.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -37,10 +37,8 @@ destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M
 ##############################################  
 
 def clear():
-    if platform.system() == "Linux":
-        system('clear')
-    elif platform.system() == "Windows":
-        system('cls')
+    if platform.system() == "Linux": system('clear')
+    elif platform.system() == "Windows": system('cls')
         
 
 def check_friends(filtered_vehicles):
@@ -189,7 +187,8 @@ async def print_vehicle_table():
     runtime = datetime.now() - start_time
     now = datetime.now(timezone("Europe/Helsinki"))
     clear()
-    print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {timetable}")
+    ping=f"{ceil((time.time() - last_message) * 1000)}ms"
+    print(f" Runtime: {int(runtime.total_seconds())}s   Ping: {ping:<8}Time: {now.strftime('%H:%M:%S')}   Timetable: {timetable}")
     print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep ")
     print(" ----|-------------------|------------|-----|----|----------")
     for item in print_list: print(item)
