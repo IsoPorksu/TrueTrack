@@ -9,11 +9,11 @@ from asyncio import *
 
 global last_message, start_time, vehicles, friends, vuoros, session
 last_message, start_time, vehicles, friends, vuoros, session, last_etas = time.time(), datetime.now(), {}, {}, {}, requests.Session(), {}
-digitransitURL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
+digitransitURL = "https://api.digitransit.fi/routing/v2/hsl/gtfs/v1"
 API_KEY = "5442e22683ae4d7ba9dc5149b51daa2e"
 session.headers.update({"Content-Type": "application/json", "digitransit-subscription-key": API_KEY})
 broker, port, topic = "mqtt.hsl.fi", 1883, "/hfp/v2/journey/ongoing/vp/metro/#" # Port 8883 does not work
-QUERY = '{alerts(route:"HSL:31M2"){alertDescriptionText}}'
+QUERY = '{alerts(route:"HSL:31M2"){alertDescriptionText(language: "en")}}'
 
 # Load JSON data
 if platform.system() == "Linux":
@@ -155,10 +155,13 @@ async def print_vehicle_table():
     global print_list, session
     print_list, station_counter = [], 0
     sync_friends()
-    """for car in vehicles:
-        current, next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
-        if eta != "": eta=int(eta)-1
-        vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro"""
+    for car in vehicles:
+        current, other_next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
+        if eta != "":
+            eta=int(eta)-1
+            if int(eta) < 0: other_next=""
+        if other_next=="": last_etas[car] = eta = 0
+        vehicles[car] = current, other_next, eta, track, destination, speed, dep, seq, vuoro
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
             station_counter += 1
@@ -188,7 +191,7 @@ async def print_vehicle_table():
     now = datetime.now(timezone("Europe/Helsinki"))
     clear()
     ping=f"{ceil((time.time() - last_message) * 1000)}ms"
-    print(f" Runtime: {int(runtime.total_seconds())}s   Ping: {ping:<8}Time: {now.strftime('%H:%M:%S')}   Timetable: {timetable}")
+    print(f" Runtime: {int(runtime.total_seconds())}s   Ping: {ping:<7} Time: {now.strftime('%H:%M:%S')}   Timetable: {timetable}")
     print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep ")
     print(" ----|-------------------|------------|-----|----|----------")
     for item in print_list: print(item)
@@ -244,6 +247,7 @@ def on_message(client, userdata, message):
         if dir == "1" and track == "2":
             if car<300 and seq == 1: seq = 2
             elif car<300 and seq == 2: seq = 1
+        a, b = current, next
         
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
@@ -262,12 +266,25 @@ def on_message(client, userdata, message):
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
+        if car in vehicles:
+            if eta == "": eta=0
+            if int(eta) == 0: next=""
+            eta=int(eta)+15
+            if int(eta) < 16 and next == "":
+                if not eta < 0 and vehicles[car][2] != "":
+                    next = vehicles[car][1]
+                    #print(car, next)
+                    current = vehicles[car][0]
+            if vehicles[car][2] == 0:
+                current, next = a, b            
+
         if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
             if car in last_etas:
                 if last_etas[car] == eta and car in vehicles:
                     eta = vehicles[car][2] # If ETA hasn't changed, get it from the vehicles dict
-                if last_etas[car] != eta: last_etas[car] = eta
+                elif last_etas[car] != eta: last_etas[car] = eta
             else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
+
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
