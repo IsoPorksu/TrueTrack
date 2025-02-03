@@ -171,16 +171,20 @@ async def print_vehicle_table():
         (range(301, 321), 'm300_count', 1),
         (range(321, 326), 'o300_count', 1)]
     dest_map = {"VS": 'vs', "  MM": 'mm', "    TAP": 'tap', "       KIL": 'kil'}
+    current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
+    # Check if dep_time is within the past 2 hours
     for vehicle_number, data in sorted_vehicles.items():
-        station, next_station, eta, _, destination, speed, departure, seq, vuoro = data
-        eta = "" if eta in ["", "0"] else str(eta)
-        print_maker(vehicle_number, station, next_station, eta, destination, speed, departure, seq, vuoro)
-        stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
-        for num_range, count_name, increment in vehicle_ranges:
-            if vehicle_number in num_range:
-                counters[count_name] += increment
-        if destination in dest_map:
-            counters[dest_map[destination]] += stock
+        dep_time = datetime.strptime(f"{datetime.today().strftime("%Y-%m-%d")} {data[6]}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
+        if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
+            station, next_station, eta, _, destination, speed, departure, seq, vuoro = data
+            eta = "" if eta in ["", "0"] else str(eta)
+            print_maker(vehicle_number, station, next_station, eta, destination, speed, departure, seq, vuoro)
+            stock = 0.5 if int(str(vehicle_number)[:3]) < 300 else 1
+            for num_range, count_name, increment in vehicle_ranges:
+                if vehicle_number in num_range:
+                    counters[count_name] += increment
+            if destination in dest_map:
+                counters[dest_map[destination]] += stock
 
     runtime = datetime.now() - start_time
     now = datetime.now(timezone("Europe/Helsinki"))
@@ -249,8 +253,6 @@ def on_message(client, userdata, message):
             if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
                 eta=""
                 current, next = next, current
-        dep_time = datetime.strptime(dep, "%H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
-        current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
 
         try:
             for found_vuoro, car_list in vuoro_list.items():
@@ -260,7 +262,7 @@ def on_message(client, userdata, message):
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
-        if (current_time - timedelta(hours=2)) <= dep_time <= (current_time + timedelta(minutes=30)):
+        if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
             if car in last_etas:
                 if last_etas[car] == eta and car in vehicles:
                     eta = vehicles[car][2] # If ETA hasn't changed, get it from the vehicles dict
