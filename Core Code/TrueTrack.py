@@ -1,11 +1,11 @@
 # Core Code v10.7 (2.2.25)
-import asyncio, json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
+import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
 from pytz import timezone
 from pathlib import Path
-from asyncio import sleep
+from asyncio import *
 
 global last_message, start_time, vehicles, friends, vuoros, session
 last_message, start_time, vehicles, friends, vuoros, session, last_etas = time.time(), datetime.now(), {}, {}, {}, requests.Session(), {}
@@ -136,8 +136,8 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
         x="x"
         vuoro=vuoro[:-1]
     else: x=" "
-    if vuoro == 'Unknown': string += f"   {departure}"
-    else: string += f"{x}{timetable}{vuoro:<3}{departure[1:]}"
+    if vuoro == 'Unknown': string += f"     {departure}"
+    else: string += f"{x}{timetable}{vuoro:<3}{departure}"
     print_list.append(string)
 
 async def fetch_alerts():
@@ -186,10 +186,10 @@ async def print_vehicle_table():
     now = datetime.now(timezone("Europe/Helsinki"))
     clear()
     print(f" Runtime: {int(runtime.total_seconds())}s  Ping: {ceil((time.time() - last_message) * 1000)}ms  Time: {now.strftime('%H:%M:%S')}  Timetable: {timetable}")
-    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep")
-    print(" ----|-------------------|------------|-----|----|---------")
+    print(" Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep ")
+    print(" ----|-------------------|------------|-----|----|----------")
     for item in print_list: print(item)
-    print(" ----|-------------------|------------|-----|----|---------")
+    print(" ----|-------------------|------------|-----|----|----------")
 
     total_m2 = counters['mm'] + counters['tap']
     total_m1 = counters['vs'] + counters['kil']
@@ -326,7 +326,7 @@ async def main():
             time.sleep(1)
     client.subscribe(topic)
     client.loop_start()
-    await asyncio.gather(update_vehicle_table(), export_vuoro(), check_timetable())
-    stop_event = asyncio.Event()
+    await gather(update_vehicle_table(), export_vuoro(), check_timetable())
+    stop_event = Event()
 
-asyncio.run(main())
+run(main())
