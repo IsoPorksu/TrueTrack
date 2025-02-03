@@ -1,5 +1,5 @@
 # Core Code v10.7 (2.2.25)
-import asyncio, json, time, platform, requests, paho.mqtt.client as mqtt
+import asyncio, json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
@@ -145,7 +145,9 @@ async def fetch_alerts():
         response = session.post(digitransitURL, json={'query': QUERY})
         if response.status_code == 200:
             for alert in response.json().get('data', {}).get('alerts', []):
-                print(f" {alert['alertDescriptionText']}")
+                wrapped_lines = textwrap.wrap(alert['alertDescriptionText'], width=59)
+                formatted_text = '\n '.join(wrapped_lines)
+                print(" "+formatted_text)  
         else:
             print(f" Error fetching alerts: HTTP {response.status_code}")
     except requests.exceptions.RequestException:
