@@ -1,4 +1,4 @@
-# Core Code v10.7 (2.2.25)
+# Core Code v11 (3.2.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
