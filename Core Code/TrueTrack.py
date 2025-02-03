@@ -240,7 +240,8 @@ def on_message(client, userdata, message):
         if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
         if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
-        if next == "VS1" and int(eta) < 60 and int(speed) < 36: next == "VS2"
+        if next == "VS1" and int(eta) < 60 and int(speed) < 36: next = "VS2"
+        if next == "MM1" and int(eta) < 60 and int(speed) < 36: next = "MM2"
         if dir == "1" and track == "2":
             if car<300 and seq == 1: seq = 2
             elif car<300 and seq == 2: seq = 1
