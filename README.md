@@ -14,12 +14,12 @@ TrueTrack is intended for anyone passionate about the Helsinki metro system who 
 ## How do I use TrueTrack?
 #### For Android users:
 * Install [PyDroid 3](https://play.google.com/store/apps/details?id=ru.iiec.pydroid3).
-* [Download this repository](https://github.com/IsoPorksu/TrueTrack/archive/refs/heads/main.zip), remove the Core Code folder and put it somewhere useful on your device.
+* [Download this latest release of this repository](https://github.com/IsoPorksu/TrueTrack/archive/refs/tags/v11.zip), remove the Core Code folder and put it somewhere useful on your device.
 * Navigate to the "Pip" section of PyDroid and install the following packages: "paho-mqtt", "pytz" and "requests".
 * Open TrueTrack.py from the PyDroid app and run it.
 
 #### For Windows users:
-* [Download this repository](https://github.com/IsoPorksu/TrueTrack/archive/refs/heads/main.zip), remove the Core Code folder and put it somewhere useful on your device.
+* [Download this latest release of this repository](https://github.com/IsoPorksu/TrueTrack/archive/refs/tags/v11.zip), remove the Core Code folder and put it somewhere useful on your device.
 * Install the required packages, either using `requirements.txt` in a virtual environment (recommended), or using pip on the command line.
 * Open TrueTrack.py and run it.
 
