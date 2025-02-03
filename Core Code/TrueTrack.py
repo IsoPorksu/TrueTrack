@@ -174,7 +174,7 @@ async def print_vehicle_table():
     current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
     # Check if dep_time is within the past 2 hours
     for vehicle_number, data in sorted_vehicles.items():
-        dep_time = datetime.strptime(f"{datetime.today().strftime("%Y-%m-%d")} {data[6]}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
+        dep_time = datetime.strptime(f"{datetime.today().strftime('%Y-%m-%d')} {data[6]}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
             station, next_station, eta, _, destination, speed, departure, seq, vuoro = data
             eta = "" if eta in ["", "0"] else str(eta)
