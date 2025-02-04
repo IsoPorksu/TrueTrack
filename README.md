@@ -42,7 +42,7 @@ The display will look something like this:
  320*|  RT2              |        KIL |     |    | S12 19:49
  ----|-------------------|------------|-----|----|----------
  6   | 4xM1         2xM2 | 0  2  0  4 |     |    |
- 2xM100, 1xM200, 3xM300, 0xO300 = :(
+ 2xM100, 1xM200, 3xM300, 0xO300 = :D
 ```
 
 The top line is relatively self-explanatory. It shows the amount of time, in seconds, that has elapsed since the program was started, followed by the amount of time since the last message was received from the MQTT broker (this not strictly a "ping"). Any ping lower than ~1000ms is normal, but a ping higher than that means there is some sort of connection issue, which may be explained by the program at the bottom of the output. Next to the "ping" is the current time and the timetable (P for Mon+Fri, T for Tue-Thu, L for Sat and S for Sun).
