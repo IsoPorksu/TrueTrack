@@ -1,4 +1,4 @@
-# TrueTrack v11 (3.2.25)
+# TrueTrack v11.1 (4.2.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -157,10 +157,16 @@ async def print_vehicle_table():
     sync_friends()
     for car in vehicles:
         current, other_next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
-        if eta != "":
-            eta=int(eta)-1
-            if int(eta) < 0: other_next=""
-        if other_next=="": last_etas[car] = eta = 0
+        if eta == "": eta=0
+            if int(eta) == 0: next=""
+            eta=int(eta)+15
+            if int(eta) < 16 and next == "":
+                if not eta < 0 and vehicles[car][2] != "":
+                    next = vehicles[car][1]
+                    #print(car, next)
+                    current = vehicles[car][0]
+            if vehicles[car][2] == 0:
+                current, next = a, b  
         vehicles[car] = current, other_next, eta, track, destination, speed, dep, seq, vuoro
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
