@@ -1,4 +1,4 @@
-# TrueTrack v11.1-beta (4.2.25)
+# TrueTrack v11.1-beta.2 (5.2.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -38,7 +38,7 @@ destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M
 
 def clear():
     if platform.system() == "Linux": system('clear')
-    elif platform.system() == "Windows": system('cls')
+    #elif platform.system() == "Windows": system('cls')
         
 
 def check_friends(filtered_vehicles):
@@ -155,25 +155,27 @@ async def print_vehicle_table():
     global print_list, session
     print_list, station_counter = [], 0
     sync_friends()
-    for car in vehicles:
+    """for car in vehicles:
         current, other_next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
         a, b = current, other_next
-        if eta == "": eta=0
+        if eta=="":eta=0
         eta=int(eta)-1
-        if int(eta) == 0: other_next=""
-        #eta=int(eta)+15"""
+        #if int(eta) == 0: other_next=""
+        #eta=int(eta)+15
         if int(eta) < 16 and other_next == "":
             if not eta < 0 and vehicles[car][2] != "":
                 other_next = vehicles[car][1]
                 #print(car, other_next)
                 current = vehicles[car][0]
         if int(eta)<=0:
-                other_next=""
+                #other_next=""
                 eta=0
                 current=b
         if vehicles[car][2] == 0:
-            current, other_next = a, b  
-        vehicles[car] = current, other_next, eta, track, destination, speed, dep, seq, vuoro
+            current, other_next = a, b
+        current = a
+        if int(eta)==0:eta,other_next,current="","",b
+        vehicles[car] = current, other_next, eta, track, destination, speed, dep, seq, vuoro"""
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
             station_counter += 1
@@ -232,72 +234,72 @@ def on_message(client, userdata, message):
     dir, line, car, vuoro, dep, seq, day, lat, lon = data.get('VP', {}).get('dir', 1), data.get('VP', {}).get('desi', 'Unknown'), data.get('VP', {}).get('veh', 'Unknown'), data.get('VP', {}).get('line', 'Unknown'), data.get('VP', {}).get('start', 'Unknown'), data.get('VP', {}).get('seq', 'Unknown'), data.get('VP', {}).get('oday', 'Unknown'), data.get('VP', {}).get('lat', 'Unknown'), data.get('VP', {}).get('long', 'Unknown'), 
     speed = str(ceil(data.get('VP', {}).get('spd', 62.5) * 3.6))
 
-    if (lat, lon) in coordinates:
-        current, next, track, pos = coordinates[(lat, lon)]
-        if current == "Pre-IK": current = "PT" if line == "M1" else "MP" if line == "M2" else ""
-        elif next == "Post-IK": next, pos = ("PT" if line == "M1" else "MP" if line == "M2" else "", "76" if line == "M1" else "132" if line == "M2" else "")
-        elif next == "Post-TAPx1": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "84" if line == "M1" else "64" if line == "M2" else "")
-        elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
-        elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
-        eta = eta_maker(pos)
-        #if car == 133: print(eta)
-        dest_key = (line, int(track))
-        destination = destinations.get(dest_key, "")
-        if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M"): # if it leaves TAP after 20:15 then it will be an M2A
-            if destination == "    TAP":
-                destination = "       KIL"
-        elif (dep, timetable) in m2as and destination == "    TAP":
-            destination = "       KIL" 
-        if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
-        # Short-term dest editing during disruption
-        """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
-        if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
-        if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
-        if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
-        if next == "VS1" and int(eta) < 60 and int(speed) < 36: next = "VS2"
-        if next == "MM1" and int(eta) < 60 and int(speed) < 36: next = "MM2"
-        if dir == "1" and track == "2":
-            if car<300 and seq == 1: seq = 2
-            elif car<300 and seq == 2: seq = 1
-        a, b = current, next
-        
-        if len(current) == 2: current = " " + current
-        speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
-        if car in vehicles:
-            if vuoro == 'Unknown': vuoro = vehicles[car][-1]
-        if car in vehicles and eta != "" and vehicles[car][2] != "":
-            if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
-                eta=""
-                current, next = next, current
+    if (lat, lon) not in coordinates: return
+    current, next, track, pos = coordinates[(lat, lon)]
+    if current == "Pre-IK": current = "PT" if line == "M1" else "MP" if line == "M2" else ""
+    elif next == "Post-IK": next, pos = ("PT" if line == "M1" else "MP" if line == "M2" else "", "76" if line == "M1" else "132" if line == "M2" else "")
+    elif next == "Post-TAPx1": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "84" if line == "M1" else "64" if line == "M2" else "")
+    elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
+    elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
+    eta = eta_maker(pos)
+    #if car == 133: print(eta)
+    dest_key = (line, int(track))
+    destination = destinations.get(dest_key, "")
+    if datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M"): # if it leaves TAP after 20:15 then it will be an M2A
+        if destination == "    TAP":
+            destination = "       KIL"
+    elif (dep, timetable) in m2as and destination == "    TAP":
+        destination = "       KIL" 
+    if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
+    # Short-term dest editing during disruption
+    """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
+    if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
+    if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
+    if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
+    if next == "VS1" and int(eta) < 60 and int(speed) < 36: next = "VS2"
+    if next == "MM1" and int(eta) < 60 and int(speed) < 36: next = "MM2"
+    if dir == "1" and track == "2":
+        if car<300 and seq == 1: seq = 2
+        elif car<300 and seq == 2: seq = 1
+    a, b = current, next
+    
+    if len(current) == 2: current = " " + current
+    speed = min(max(int(speed), 15), 81) if int(speed) != 0 else 0
+    if car in vehicles:
+        if vuoro == 'Unknown': vuoro = vehicles[car][-1]
+    if car in vehicles and eta != "" and vehicles[car][2] != "":
+        if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
+            eta=""
+            current, next = next, current
+    if car==167:print(car, eta)
 
-        try:
-            for found_vuoro, car_list in vuoro_list.items():
-                if car in car_list and not vuoro.endswith("x"):
-                    if vuoro=='Unknown': vuoro = f"{found_vuoro}x"
-        except Exception as e: print(f" JSON fetch error: {e}")
-        # Check if dep_time is within the past 2 hours
-        dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
-        current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
-        if car in vehicles:
-            if eta == "": eta=0
-            if int(eta) == 0: next=""
-            eta=int(eta)+15
-            if int(eta) < 16 and next == "":
-                if not eta < 0 and vehicles[car][2] != "":
-                    next = vehicles[car][1]
-                    #print(car, next)
-                    current = vehicles[car][0]
-            if vehicles[car][2] == 0:
-                current, next = a, b            
-
-        if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
-            if car in last_etas:
-                if last_etas[car] == eta and car in vehicles:
-                    eta = vehicles[car][2] # If ETA hasn't changed, get it from the vehicles dict
-                elif last_etas[car] != eta: last_etas[car] = eta
-            else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
-
-            vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
+    try:
+        for found_vuoro, car_list in vuoro_list.items():
+            if car in car_list and not vuoro.endswith("x"):
+                if vuoro=='Unknown': vuoro = f"{found_vuoro}x"
+    except Exception as e: print(f" JSON fetch error: {e}")
+    # Check if dep_time is within the past 2 hours
+    dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
+    current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
+    if car in vehicles:
+        if eta == "" and next == "": eta=0
+        if int(eta) == 0: next=""
+        eta=int(eta)+15
+        if int(eta) < 16 and next == "":
+            if not eta < 0 and vehicles[car][2] != "":
+                next = vehicles[car][1]
+                #print(car, next)
+                current = vehicles[car][0]
+        if vehicles[car][2] == 0:
+            current, next = a, b  
+    found_eta=eta
+    if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
+        if car in last_etas:
+            if last_etas[car] == found_eta and car in vehicles: # If ETA hasn't changed...
+                eta = vehicles[car][2] # ...then keep it the same
+            if last_etas[car] != found_eta: last_etas[car] = eta # If it has changed...
+        else: last_etas[car] = eta # ... then use that and reset in the last_etas dict
+        vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
     await sleep(10)
