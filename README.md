@@ -28,7 +28,8 @@ I don't know; figure it out yourself.
 
 ## How do I read the TrueTrack display?
 The display will look something like this:
-```Runtime: 4s  Ping: 138ms  Time: 20:50:32  Timetable: S
+```
+ Runtime: 85s   Ping: 1ms     Time: 20:52:30   Timetable: P
  Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep
  ----|-------------------|------------|-----|----|----------
 ^113 |  HY1              |   MM       | 177 |    |xS6  20:35
