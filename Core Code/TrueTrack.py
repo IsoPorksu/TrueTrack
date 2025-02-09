@@ -38,7 +38,7 @@ destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M
 
 def clear():
     if platform.system() == "Linux": system('clear')
-    #elif platform.system() == "Windows": system('cls')
+    elif platform.system() == "Windows": system('cls')
         
 
 def check_friends(filtered_vehicles):
