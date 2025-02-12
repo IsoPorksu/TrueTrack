@@ -1,4 +1,4 @@
-# TrueTrack v11.1-beta.3 (12.2.25)
+# TrueTrack v11.1-beta.4 (12.2.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -162,9 +162,11 @@ async def print_vehicle_table():
         a, b = current, other_next
         if eta == "": eta=0
         eta=int(eta)-1
-        """if int(eta) == 0: other_next=""
+        if int(eta) <= 0:
+            other_next=""
+            eta=0
         #eta=int(eta)+15
-        if int(eta) < 16 and other_next == "":
+        """if int(eta) < 16 and other_next == "":
             if not eta < 0 and vehicles[car][2] != "":
                 other_next = vehicles[car][1]
                 #print(car, other_next)
@@ -284,18 +286,6 @@ def on_message(client, userdata, message):
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
-        """if car in vehicles:
-            if eta == "": eta=0
-            if int(eta) == 0: next=""
-            eta=int(eta)+15
-            if int(eta) < 16 and next == "":
-                if not eta < 0 and vehicles[car][2] != "":
-                    next = vehicles[car][1]
-                    #print(car, next)
-                    current = vehicles[car][0]
-            if vehicles[car][2] == 0:
-                current, next = a, b     """       
-
         if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
             if car in last_etas:
                 if last_etas[car] == eta and car in vehicles:
