@@ -264,7 +264,8 @@ def on_message(client, userdata, message):
         if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
         if next == "VS1" and int(eta) < 60 and int(speed) < 36: next = "VS2"
         if next == "MM1" and int(eta) < 60 and int(speed) < 36: next = "MM2"
-        if dir == "1" and track == "2":
+        #if car == 203: print(203, dir, seq)
+        if track == "2" and dest == "    TAP" or dest=="       KIL" or dest == "     KP":
             if car<300 and seq == 1: seq = 2
             elif car<300 and seq == 2: seq = 1
         a, b = current, next
