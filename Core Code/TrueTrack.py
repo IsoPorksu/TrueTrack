@@ -118,16 +118,18 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if car in (141, 179): new_car = str(new_car)+"'" # Adverts
     if car in (000, 135): new_car = str(new_car)+"+" # Joel likes
     if car in (000, 155): new_car = str(new_car)+"-" # Joel dislikes
-    string = f"{new_car:<5}| {station:>4} "
-    if next: string += f"-> {next:<4}{eta:>4}s | {destination:<11}|"
-    else: string += f"             | {destination:<11}|"
     friend = friends.get(car, "")
     if friend in (131, 320): friend = str(friend)+"*"
     if friend in (141, 179): friend = str(friend)+"'"
     if friend in (000, 135): friend = str(friend)+"+"
     if friend in (000, 155): friend = str(friend)+"-"
     if car < 299 and seq == 2: friend = "^"+str(friend)
-
+    if staion.endswith("2"):
+        friend += 1
+        car += 1
+    string = f"{new_car:<5}| {station:>4} "
+    if next: string += f"-> {next:<4}{eta:>4}s | {destination:<11}|"
+    else: string += f"             | {destination:<11}|"
     else: friend = " " + str(friend)
     if speed not in ["0", 0] and next:
         string += f"{friend:<5}| {speed:>2} |" if friend else f"     | {speed:>2} |"
