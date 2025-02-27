@@ -29,18 +29,18 @@ I don't know; figure it out yourself.
 ## How do I read the TrueTrack display?
 The display will look something like this:
 ```
- Runtime: 85s   Ping: 1ms     Time: 20:52:30   Timetable: P
+ Runtime: 85s   Ping: 1ms     Time: 20:52:30   Timetable: S
  Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep
  ----|-------------------|------------|-----|----|----------
-^113 |  HY1              |   MM       | 177 |    |xS6  20:35
-^123 | LAS2 -> KOS2  21s |        KIL | 167 | 62 | S7  19:18
- 167 | LAS2 -> KOS2  21s |        KIL |^123 | 62 | S7  19:18
- 177 |  HY1              |   MM       |^113 |    |xS6  20:35
-^203 |  IK1 -> MP1   25s |   MM       | 219 | 70 | S14 20:21
- 219 |  IK1 -> MP1   25s |   MM       |^203 | 70 | S14 20:21
- 303 |  KA2              |        KIL |     |    | S3  19:38
- 309 | URP2              |        KIL |     |    |xS19 19:29
- 320*|  RT2              |        KIL |     |    | S12 19:49
+^113 |  HY1              |   MM       | 177 |    |xV6  20:35
+^123 | LAS2 -> KOS2  21s |        KIL | 167 | 62 | V7  19:18
+ 167 | LAS2 -> KOS2  21s |        KIL |^123 | 62 | V7  19:18
+ 177 |  HY1              |   MM       |^113 |    |xV6  20:35
+^203 |  IK1 -> MP1   25s |   MM       | 219 | 70 | V14 20:21
+ 219 |  IK1 -> MP1   25s |   MM       |^203 | 70 | V14 20:21
+ 303 |  KA2              |        KIL |     |    | V3  19:38
+ 309 | URP2              |        KIL |     |    |xV19 19:29
+ 320*|  RT2              |        KIL |     |    | V12 19:49
  ----|-------------------|------------|-----|----|----------
  6   | 4xM1         2xM2 | 0  2  0  4 |     |    |
  2xM100, 1xM200, 3xM300, 0xO300 = :D
