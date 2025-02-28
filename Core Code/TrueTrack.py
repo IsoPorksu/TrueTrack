@@ -1,4 +1,4 @@
-# TrueTrack v11.1-beta.4 (12.2.25)
+# TrueTrack v11.1-beta.5 (28.2.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -112,25 +112,25 @@ async def check_timetable():
     await sleep(1)
 
 def print_maker(car, station, next, eta, destination, speed, departure, seq, vuoro):
+    friend = friends.get(car, "")
+    if station.endswith("1") and friend != "":
+        friend = int(friend)+1
+        car += 1
     if car < 299 and seq == 1: new_car = "^"+str(car)
     else: new_car = " " + str(car)
-    if car in (131, 320): new_car = str(new_car)+"*" # Special (motors/straphangers)
-    if car in (141, 179): new_car = str(new_car)+"'" # Adverts
-    if car in (000, 135): new_car = str(new_car)+"+" # Joel likes
-    if car in (000, 155): new_car = str(new_car)+"-" # Joel dislikes
-    friend = friends.get(car, "")
-    if friend in (131, 320): friend = str(friend)+"*"
-    if friend in (141, 179): friend = str(friend)+"'"
-    if friend in (000, 135): friend = str(friend)+"+"
-    if friend in (000, 155): friend = str(friend)+"-"
+    if car in (131, 132, 320): new_car = str(new_car)+"*" # Special (motors/straphangers)
+    if car in (141, 142, 179, 180): new_car = str(new_car)+"'" # Adverts
+    if car in (135, 136): new_car = str(new_car)+"+" # Joel likes
+    if car in (155, 156): new_car = str(new_car)+"-" # Joel dislikes
+    if friend in (131, 132, 320): friend = str(friend)+"*"
+    if friend in (141, 142, 179, 180): friend = str(friend)+"'"
+    if friend in (135, 136): friend = str(friend)+"+"
+    if friend in (155, 156): friend = str(friend)+"-"
     if car < 299 and seq == 2: friend = "^"+str(friend)
-    if staion.endswith("2"):
-        friend += 1
-        car += 1
+    else: friend = " " + str(friend)
     string = f"{new_car:<5}| {station:>4} "
     if next: string += f"-> {next:<4}{eta:>4}s | {destination:<11}|"
     else: string += f"             | {destination:<11}|"
-    else: friend = " " + str(friend)
     if speed not in ["0", 0] and next:
         string += f"{friend:<5}| {speed:>2} |" if friend else f"     | {speed:>2} |"
     else: string += f"{friend:<5}|    |" if friend else f"     |    |"
@@ -139,7 +139,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
         vuoro=vuoro[:-1]
     else: x=" "
     if vuoro == 'Unknown': string += f"     {departure}"
-    else: string += f"{x}{timetable}{vuoro:<3}{departure}"
+    else: string += f"{x}V{vuoro:<3}{departure}"
     print_list.append(string)
 
 def fetch_alerts():
@@ -204,7 +204,7 @@ async def print_vehicle_table():
                     counters[count_name] += increment
             if destination in dest_map:
                 counters[dest_map[destination]] += stock
-
+    global runtime
     runtime = datetime.now() - start_time
     now = datetime.now(timezone("Europe/Helsinki"))
     clear()
@@ -227,8 +227,10 @@ async def print_vehicle_table():
                 formatted_text = '\n '.join(wrapped_lines)
                 print(" "+formatted_text)
     # Traffic status
-    if station_counter >= sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) and runtime.total_seconds() > 3:
+    if station_counter >= sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) > 10 and runtime.total_seconds() > 5:
         print(" ALL TRAFFIC IS STOPPED")
+    if sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) == 0 and runtime.total_seconds() > 5: print(" All trains are currently in bed")
+    
 
 async def update_vehicle_table():
     while True:
@@ -299,7 +301,8 @@ def on_message(client, userdata, message):
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
-    await sleep(10)
+    if str(runtime.total_seconds())[:-1] != "0":
+        return
     while True: # Open old data
         try:
             current_date = (datetime.now()-timedelta(hours=4.5)).strftime("%d%m%y")
