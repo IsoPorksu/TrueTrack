@@ -7,8 +7,8 @@ from pytz import timezone
 from pathlib import Path
 from asyncio import *
 
-global last_message, start_time, vehicles, friends, vuoros, session
-last_message, start_time, vehicles, friends, vuoros, session, last_etas = time.time(), datetime.now(), {}, {}, {}, requests.Session(), {}
+global last_message, start_time, vehicles, friends, vuoros, session, alerts
+last_message, start_time, vehicles, friends, vuoros, session, last_etas, alerts = time.time(), datetime.now(), {}, {}, {}, requests.Session(), {}, None
 digitransitURL = "https://api.digitransit.fi/routing/v2/hsl/gtfs/v1"
 API_KEY = "5442e22683ae4d7ba9dc5149b51daa2e"
 session.headers.update({"Content-Type": "application/json", "digitransit-subscription-key": API_KEY})
@@ -38,7 +38,7 @@ destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M
 
 def clear():
     if platform.system() == "Linux": system('clear')
-    elif platform.system() == "Windows": system('cls')
+    #elif platform.system() == "Windows": system('cls')
         
 
 def check_friends(filtered_vehicles):
@@ -142,21 +142,21 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     else: string += f"{x}V{vuoro:<3}{departure}"
     print_list.append(string)
 
-def fetch_alerts():
+async def fetch_alerts():
     try:
         response = session.post(digitransitURL, json={'query': QUERY})
         if response.status_code == 200:
-            return response  
+            alerts = response  
         else:
             print(f" Error fetching alerts: HTTP {response.status_code}")
-            return {} 
+            alerts = None 
     except requests.exceptions.RequestException:
         print(" No internet, retrying...")
-        return {}
+        alerts = None
+    await sleep(1)
 
 async def print_vehicle_table():
     global print_list, session, response
-    response = fetch_alerts()
     print_list, station_counter = [], 0
     sync_friends()
     for car in vehicles:
@@ -222,10 +222,11 @@ async def print_vehicle_table():
     emotion = [":D", ":(", ":(", ":C", ">:(", ">:C"][int(counters['o300_count'])]
     print(f" {ceil(counters['m100_count'])}xM100, {ceil(counters['m200_count'])}xM200, {ceil(counters['m300_count'])}xM300, {ceil(counters['o300_count'])}xO300 = {emotion}")
     
-    for alert in response.json().get('data', {}).get('alerts', []):
-                wrapped_lines = textwrap.wrap(alert['alertDescriptionText'], width=59)
-                formatted_text = '\n '.join(wrapped_lines)
-                print(" "+formatted_text)
+    if alerts != None:
+        for alert in alerts.json().get('data', {}).get('alerts', []):
+            wrapped_lines = textwrap.wrap(alert['alertDescriptionText'], width=59)
+            formatted_text = '\n '.join(wrapped_lines)
+            print(" "+formatted_text)
     # Traffic status
     if station_counter >= sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) > 10 and runtime.total_seconds() > 5:
         print(" ALL TRAFFIC IS STOPPED")
@@ -306,9 +307,11 @@ async def export_vuoro():
         return
     while True: # Open old data
         try:
-            current_date = (datetime.now()-timedelta(hours=4.5)).strftime("%d%m%y")
+            date = datetime.now()-timedelta(hours=4.5)
+            current_date = (date).strftime("%d%m%y")
             if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
-            else: file = Path(f'Core Code/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+            else: file = Path(f'Core Code/Vuoro Lists/{date.strftime("%B")} {date.strftime("%Y")} ({date.strftime("%m%y")})/vuoro_{current_date}{timetable}.json')
+            #print(f'Core Code/Vuoro Lists/{date.strftime("%B")} {date.strftime("%Y")} ({date.strftime("%m%y")})/vuoro_{current_date}{timetable}.json')
             if file.exists():
                 with file.open('r') as f: existing = json.load(f)
             else: existing = {}
@@ -360,7 +363,7 @@ async def main():
             time.sleep(1)
     client.subscribe(topic)
     client.loop_start()
-    await gather(update_vehicle_table(), export_vuoro(), check_timetable())
+    await gather(update_vehicle_table(), export_vuoro(), check_timetable(), fetch_alerts())
     stop_event = Event()
 
 run(main())
