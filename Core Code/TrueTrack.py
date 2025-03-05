@@ -1,4 +1,4 @@
-# TrueTrack v11.1-beta.5 (28.2.25)
+# TrueTrack v11.1-beta.6 (5.3.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -301,7 +301,8 @@ def on_message(client, userdata, message):
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
-    if str(runtime.total_seconds())[:-1] != "0":
+    #print(runtime.total_seconds())
+    if str(runtime.total_seconds()).endswith("0"):
         return
     while True: # Open old data
         try:
