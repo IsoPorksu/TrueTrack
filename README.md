@@ -29,21 +29,27 @@ I don't know; figure it out yourself.
 ## How do I read the TrueTrack display?
 The display will look something like this:
 ```
- Runtime: 85s   Ping: 1ms     Time: 20:52:30   Timetable: S
+ Runtime: 7s   Ping: 399ms   Time: 22:50:29   Timetable: P 
  Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep
  ----|-------------------|------------|-----|----|----------
-^113 |  HY1              |   MM       | 177 |    |xV6  20:35
-^123 | LAS2 -> KOS2  21s |        KIL | 167 | 62 | V7  19:18
- 167 | LAS2 -> KOS2  21s |        KIL |^123 | 62 | V7  19:18
- 177 |  HY1              |   MM       |^113 |    |xV6  20:35
-^203 |  IK1 -> MP1   25s |   MM       | 219 | 70 | V14 20:21
- 219 |  IK1 -> MP1   25s |   MM       |^203 | 70 | V14 20:21
- 303 |  KA2              |        KIL |     |    | V3  19:38
- 309 | URP2              |        KIL |     |    |xV19 19:29
- 320*|  RT2              |        KIL |     |    | V12 19:49
+^118 | TAP1 -> OTA1  28s |   MM       | 148 | 61 | V18 22:33
+^148 | TAP1 -> OTA1  28s |   MM       | 118 | 61 | V18 22:33
+ 149 | KIL2              |        KIL |^151 |    | V38 22:00
+ 151 | KIL2              |        KIL |^149 |    | V38 22:00
+^172 | MAK1              | VS         | 182 |    | V28 22:41
+^182 | MAK1              | VS         | 172 |    | V28 22:41
+ 303 |  HY1              |   MM       |     |    |xV2  22:18
+ 307 |  IK1 -> MP1   19s |   MM       |     | 58 | V5  22:03
+ 311 | ESL1              |   MM       |     |    |xV26 22:48
+ 312 | LAS2 -> KOS2  22s |        KIL |     | 67 | V27 22:22
+ 315 |  PT2 -> IK2   12s |        KIL |     | 48 | V15 22:45
+ 318 | LAS1              | VS         |     |    |xV10 22:26
+ 321 | MAK2 -> FIN2  51s |        KIL |     | 63 | V34 22:07
+ 323 | TAP2              |        KIL |     |    |xV32 22:15
+ 325 |  KS1 -> HN1   42s | VS         |     | 67 | V3  22:11
  ----|-------------------|------------|-----|----|----------
- 6   | 4xM1         2xM2 | 0  2  0  4 |     |    |
- 2xM100, 1xM200, 3xM300, 0xO300 = :D
+ 12  | 8xM1         4xM2 | 3  4  0  5 |     |    |
+ 3xM100, 0xM200, 6xM300, 3xO300 = :C
 ```
 
 The top line is relatively self-explanatory. It shows the amount of time, in seconds, that has elapsed since the program was started, followed by the amount of time since the last message was received from the MQTT broker (this not strictly a "ping"). Any ping lower than ~1000ms is normal, but a ping higher than that means there is some sort of connection issue, which may be explained by the program at the bottom of the output. Next to the "ping" is the current time and the timetable (P for Mon+Fri, T for Tue-Thu, L for Sat and S for Sun).
