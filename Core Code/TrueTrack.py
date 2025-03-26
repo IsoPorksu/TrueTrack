@@ -38,7 +38,7 @@ destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M
 
 def clear():
     if platform.system() == "Linux": system('clear')
-    #elif platform.system() == "Windows": system('cls')
+    if platform.system() == "Windows": system('cls')
         
 
 def check_friends(filtered_vehicles):
@@ -261,18 +261,19 @@ def on_message(client, userdata, message):
                 destination = "       KIL"
         elif (dep, timetable) in m2as and destination == "    TAP":
             destination = "       KIL" 
-        if current not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: current += track
+        if current not in ["KILK", "TAPG", "SVV", "KPG", "VSG", "MMG", ""]: current += track
         # Short-term dest editing during disruption
         """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
         if current in ["KIL2", "ESL2", "SOU2", "KAI2", "FIN2", "MAK2", "NIK2", "URP2", "TAP2", "OTA2", "KEN2", "KOS2", "LAS2"]: destination == "       KIL"
         if current in ["MMG", "MM2", "KL2", "MP2", "IK2", "VSG", "VS2", "ST2", "HN2", "KS2", "KA2", "SN2", "HT2", "HY2", "RT2", "KP2", "KPG"]: destination = "     KP" """
-        if next not in ["KILK", "TAPG", "SVV", "VSG", "MMG", ""]: next += track
+        if next not in ["KILK", "TAPG", "SVV", "KPG", "VSG", "MMG", ""]: next += track
         if next == "VS1" and int(eta) < 60 and int(speed) < 36: next = "VS2"
         if next == "MM1" and int(eta) < 60 and int(speed) < 36: next = "MM2"
         #if car == 203: print(203, dir, seq)
         if track == "2" and destination == "    TAP" or destination == "       KIL" or destination == "     KP":
             if car<300 and seq == 1: seq = 2
             elif car<300 and seq == 2: seq = 1
+            pass
         a, b = current, next
         
         if len(current) == 2: current = " " + current
