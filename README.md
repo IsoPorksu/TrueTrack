@@ -32,12 +32,12 @@ The display will look something like this:
  Runtime: 7s   Ping: 399ms   Time: 22:50:29   Timetable: P 
  Set |  Now -> Next  ETA | Destination|Set 2|Sped|Vuoro Dep
  ----|-------------------|------------|-----|----|----------
-^118 | TAP1 -> OTA1  28s |   MM       | 148 | 61 | V18 22:33
+ 118 | TAP1 -> OTA1  28s |   MM       |^148 | 61 | V18 22:33
 ^148 | TAP1 -> OTA1  28s |   MM       | 118 | 61 | V18 22:33
- 149 | KIL2              |        KIL |^151 |    | V38 22:00
+^149 | KIL2              |        KIL | 151 |    | V38 22:00
  151 | KIL2              |        KIL |^149 |    | V38 22:00
 ^172 | MAK1              | VS         | 182 |    | V28 22:41
-^182 | MAK1              | VS         | 172 |    | V28 22:41
+ 182 | MAK1              | VS         |^172 |    | V28 22:41
  303 |  HY1              |   MM       |     |    |xV2  22:18
  307 |  IK1 -> MP1   19s |   MM       |     | 58 | V5  22:03
  311 | ESL1              |   MM       |     |    |xV26 22:48
