@@ -95,9 +95,10 @@ async def check_timetable():
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
     try:
-        current_date = datetime.now().strftime("%d%m%y")
+        date = datetime.now()-timedelta(hours=4.5)
+        current_date = (date).strftime("%d%m%y")
         if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
-        else: file = Path(f'Core Code/Vuoro Lists/vuoro_{current_date}{timetable}.json')
+        else: file = Path(f'Core Code/Vuoro Lists/{date.strftime("%m")}.{date.strftime("%y")} ({date.strftime("%B")} {date.strftime("%Y")})/vuoro_{current_date}{timetable}.json')
         if file.exists():
             with file.open('r') as f: vuoro_list = json.load(f)
         else:
@@ -311,8 +312,7 @@ async def export_vuoro():
             date = datetime.now()-timedelta(hours=4.5)
             current_date = (date).strftime("%d%m%y")
             if platform.system() == "Linux": file = Path(f'Vuoro Lists/vuoro_{current_date}{timetable}.json')
-            else: file = Path(f'Core Code/Vuoro Lists/{date.strftime("%B")} {date.strftime("%Y")} ({date.strftime("%m%y")})/vuoro_{current_date}{timetable}.json')
-            #print(f'Core Code/Vuoro Lists/{date.strftime("%B")} {date.strftime("%Y")} ({date.strftime("%m%y")})/vuoro_{current_date}{timetable}.json')
+            else: file = Path(f'Core Code/Vuoro Lists/{date.strftime("%m")}.{date.strftime("%y")} ({date.strftime("%B")} {date.strftime("%Y")})/vuoro_{current_date}{timetable}.json')
             if file.exists():
                 with file.open('r') as f: existing = json.load(f)
             else: existing = {}
@@ -339,6 +339,7 @@ async def export_vuoro():
         except Exception as e:
             print(f" JSON dumping error: {e}")
             break
+        print("Exported!")
 
 def on_disconnect(client, userdata, rc):
     if rc != 0:
