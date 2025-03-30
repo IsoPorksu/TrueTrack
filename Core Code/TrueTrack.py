@@ -180,6 +180,7 @@ async def print_vehicle_table():
                 current=b
         if vehicles[car][2] == 0:
             current, other_next = a, b  """
+        
         vehicles[car] = current, other_next, eta, track, destination, speed, dep, seq, vuoro
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
@@ -194,7 +195,8 @@ async def print_vehicle_table():
     current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
     # Check if dep_time is within the past 2 hours
     for vehicle_number, data in sorted_vehicles.items():
-        dep_time = datetime.strptime(f"{datetime.today().strftime('%Y-%m-%d')} {data[6]}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
+        dep_time_naive = datetime.strptime(f"{current_time.date()} {data[6]}", "%Y-%m-%d %H:%M")
+        dep_time = timezone("Europe/Helsinki").localize(dep_time_naive)
         if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
             station, next_station, eta, _, destination, speed, departure, seq, vuoro = data
             eta = "" if eta in ["", "0"] else str(eta)
@@ -246,6 +248,8 @@ def on_message(client, userdata, message):
     dir, line, car, vuoro, dep, seq, day, lat, lon = data.get('VP', {}).get('dir', 1), data.get('VP', {}).get('desi', 'Unknown'), data.get('VP', {}).get('veh', 'Unknown'), data.get('VP', {}).get('line', 'Unknown'), data.get('VP', {}).get('start', 'Unknown'), data.get('VP', {}).get('seq', 'Unknown'), data.get('VP', {}).get('oday', 'Unknown'), data.get('VP', {}).get('lat', 'Unknown'), data.get('VP', {}).get('long', 'Unknown'), 
     speed = str(ceil(data.get('VP', {}).get('spd', 62.5) * 3.6))
 
+    #if (lat, lon) not in coordinates:
+    #    print(car)
     if (lat, lon) in coordinates:
         current, next, track, pos = coordinates[(lat, lon)]
         if current == "Pre-IK": current = "PT" if line == "M1" else "MP" if line == "M2" else ""
@@ -257,7 +261,7 @@ def on_message(client, userdata, message):
         #if car == 133: print(eta)
         dest_key = (line, int(track))
         destination = destinations.get(dest_key, "")
-        if (datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M") and track=="2") or (datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M") and track=="1"): # if it leaves TAP after 20:15 then it will be an M2A
+        if (datetime.strptime(dep, "%H:%M") > datetime.strptime("21:00", "%H:%M") and track=="2") or (datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M") and track=="1"): # if it leaves TAP after 20:15 then it will be an M2A
             if destination == "    TAP":
                 destination = "       KIL"
         elif (dep, timetable) in m2as and destination == "    TAP":
@@ -294,7 +298,9 @@ def on_message(client, userdata, message):
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
-        if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
+        a=1
+        #if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
+        if a==1:
             if car in last_etas:
                 if last_etas[car] == eta and car in vehicles:
                     eta = vehicles[car][2] # If ETA hasn't changed, get it from the vehicles dict
