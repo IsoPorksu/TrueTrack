@@ -117,7 +117,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if station.endswith("1") and friend != "":
         friend = int(friend)+1
         car += 1
-    if car < 299 and seq == 1: new_car = "^"+str(car)
+    if car < 299 and seq == 1: new_car = " "+str(car)
     else: new_car = " " + str(car)
     if car in (131, 132, 320): new_car = str(new_car)+"*" # Special (motors/straphangers)
     if car in (141, 142, 179, 180): new_car = str(new_car)+"'" # Adverts
@@ -127,7 +127,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if friend in (141, 142, 179, 180): friend = str(friend)+"'"
     if friend in (135, 136): friend = str(friend)+"+"
     if friend in (155, 156): friend = str(friend)+"-"
-    if car < 299 and seq == 2: friend = "^"+str(friend)
+    if car < 299 and seq == 2: friend = " "+str(friend)
     else: friend = " " + str(friend)
     string = f"{new_car:<5}| {station:>4} "
     if next: string += f"-> {next:<4}{eta:>4}s | {destination:<11}|"
