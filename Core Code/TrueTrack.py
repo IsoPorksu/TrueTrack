@@ -161,27 +161,27 @@ async def print_vehicle_table():
     print_list, station_counter = [], 0
     sync_friends()
     for car in vehicles:
-        current, other_next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
-        a, b = current, other_next
+        current, next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
+        a, b = current, next
         if eta == "": eta=0
         eta=int(eta)-1
         if int(eta) <= 0:
-            other_next=""
+            next=""
             eta=0
         #eta=int(eta)+15
-        """if int(eta) < 16 and other_next == "":
+        """if int(eta) < 16 and next == "":
             if not eta < 0 and vehicles[car][2] != "":
-                other_next = vehicles[car][1]
-                #print(car, other_next)
+                next = vehicles[car][1]
+                #print(car, next)
                 current = vehicles[car][0]
         if int(eta)<=0:
-                other_next=""
+                next=""
                 eta=0
                 current=b
         if vehicles[car][2] == 0:
-            current, other_next = a, b  """
+            current, next = a, b  """
         
-        vehicles[car] = current, other_next, eta, track, destination, speed, dep, seq, vuoro
+        vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     if next == "":
             station_counter += 1
@@ -298,15 +298,12 @@ def on_message(client, userdata, message):
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
         current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
-        a=1
-        #if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
-        if a==1:
+        if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
             if car in last_etas:
                 if last_etas[car] == eta and car in vehicles:
                     eta = vehicles[car][2] # If ETA hasn't changed, get it from the vehicles dict
                 elif last_etas[car] != eta: last_etas[car] = eta
             else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
-
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
