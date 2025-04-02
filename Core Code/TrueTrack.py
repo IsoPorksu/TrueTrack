@@ -188,7 +188,7 @@ async def print_vehicle_table():
     counters = {key: 0 for key in ['vs', 'mm', 'tap', 'kil', 'm100_count', 'm200_count', 'm300_count', 'o300_count']}
     vehicle_ranges = [
         (range(200), 'm100_count', 0.5),
-        (range(201, 224), 'm200_count', 0.5),
+        (range(201, 225), 'm200_count', 0.5),
         (range(301, 321), 'm300_count', 1),
         (range(321, 326), 'o300_count', 1)]
     dest_map = {"VS": 'vs', "  MM": 'mm', "    TAP": 'tap', "       KIL": 'kil'}
