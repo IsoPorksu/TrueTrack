@@ -103,7 +103,7 @@ async def check_timetable():
             with file.open('r') as f: vuoro_list = json.load(f)
         else:
             try:
-                url = f'https://raw.githubusercontent.com/IsoPorksu/TrueTrack/refs/heads/main/Core%20Code/Vuoro%20Lists/vuoro_{current_date}{timetable}.json'
+                url = f'https://raw.githubusercontent.com/IsoPorksu/TrueTrack/refs/heads/main/Core%20Code/Vuoro%20Lists/{date.strftime("%m")}.{date.strftime("%y")} ({date.strftime("%B")} {date.strftime("%Y")})/vuoro_{current_date}{timetable}.json'
                 resp = requests.get(url)
                 vuoro_list = json.loads(resp.text)
             except: vuoro_list = {}
