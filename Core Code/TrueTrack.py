@@ -4,7 +4,6 @@ from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
 from pytz import timezone
-from zoneinfo import ZoneInfo
 from pathlib import Path
 from asyncio import *
 
@@ -40,7 +39,6 @@ destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M
 def clear():
     if platform.system() == "Linux": system('clear')
     if platform.system() == "Windows": system('cls')
-        
 
 def check_friends(filtered_vehicles):
     taken = []
@@ -74,7 +72,6 @@ def check_friends(filtered_vehicles):
                             friends[vehicle_number] = other_vehicle_number
                         taken.append(vehicle_number)
                         taken.append(other_vehicle_number)
-
 
 def sync_friends():
     filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 200}
