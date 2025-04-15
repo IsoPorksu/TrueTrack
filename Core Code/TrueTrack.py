@@ -1,9 +1,10 @@
-# TrueTrack v11.1-beta.6 (5.3.25)
+# TrueTrack v12 (15.4.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
 from datetime import datetime, timezone, timedelta
 from pytz import timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from asyncio import *
 
@@ -79,7 +80,7 @@ def sync_friends():
     filtered_vehicles = {k: v for k, v in vehicles.items() if int(k) < 200}
     check_friends(filtered_vehicles)
     filtered_vehicles = {k: v for k, v in vehicles.items() if 200 < int(k) < 300}
-    check_friends(filtered_vehicles) 
+    check_friends(filtered_vehicles)
 
 def eta_maker(pos):
     try:
@@ -164,22 +165,19 @@ async def print_vehicle_table():
         current, other_next, eta, track, destination, speed, dep, seq, vuoro = vehicles[car]
         a, b = current, other_next
         if eta == "": eta=0
-        eta=int(eta)-1
-        if int(eta) <= 0:
-            other_next=""
-            eta=0
         #eta=int(eta)+15
-        """if int(eta) < 16 and other_next == "":
+        eta=int(eta)-1
+        if int(eta) < 16 and other_next == "":
             if not eta < 0 and vehicles[car][2] != "":
                 other_next = vehicles[car][1]
                 #print(car, other_next)
                 current = vehicles[car][0]
-        if int(eta)<=0:
-                other_next=""
-                eta=0
-                current=b
         if vehicles[car][2] == 0:
-            current, other_next = a, b  """
+            current, other_next = a, b
+        if int(eta)<=0:
+            other_next=""
+            eta=0
+            if b != "": current=b 
         
         vehicles[car] = current, other_next, eta, track, destination, speed, dep, seq, vuoro
     sorted_vehicles = {k: vehicles[k] for k in sorted(vehicles)}
@@ -297,7 +295,7 @@ def on_message(client, userdata, message):
         except Exception as e: print(f" JSON fetch error: {e}")
         # Check if dep_time is within the past 2 hours
         dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
-        current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
+        current_time = datetime.now(timezone("Europe/London")).replace(second=0, microsecond=0)
         a=1
         #if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
         if a==1:
@@ -308,6 +306,8 @@ def on_message(client, userdata, message):
             else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
 
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
+            if car==215:
+                vehicles[219] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
     #print(runtime.total_seconds())
