@@ -248,7 +248,9 @@ def on_message(client, userdata, message):
     if (lat, lon) in coordinates:
         current, next, track, pos = coordinates[(lat, lon)]
         if current == "Pre-IK": current = "PT" if line == "M1" else "MP" if line == "M2" else ""
-        elif next == "Post-IK": next, pos = ("PT" if line == "M1" else "MP" if line == "M2" else "", "76" if line == "M1" else "132" if line == "M2" else "")
+        elif next == "Post-IKx1": next, pos = ("PT" if line == "M1" else "MP" if line == "M2" else "", "76" if line == "M1" else "133" if line == "M2" else "")
+        elif next == "Post-IKx2": next, pos = ("PT" if line == "M1" else "MP" if line == "M2" else "", "70" if line == "M1" else "130" if line == "M2" else "")
+        elif next == "Post-IKx3": next, pos = ("PT" if line == "M1" else "MP" if line == "M2" else "", "69" if line == "M1" else "127" if line == "M2" else "")
         elif next == "Post-TAPx1": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "84" if line == "M1" else "64" if line == "M2" else "")
         elif next == "Post-TAPx2": next, pos = ("URP" if line == "M1" else "TAPG" if line == "M2" else "", "79" if line == "M1" else "58" if line == "M2" else "")
         elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
