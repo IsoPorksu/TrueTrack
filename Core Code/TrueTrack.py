@@ -2,7 +2,7 @@
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date as dt_date
 from pytz import timezone
 from pathlib import Path
 from asyncio import *
@@ -89,7 +89,8 @@ def eta_maker(pos):
 async def check_timetable():
     global timetable, vuoro_list
     date = (datetime.now(timezone("Europe/Helsinki")) - timedelta(hours=3)).date()
-    timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
+    if dt_date(2025, 6, 16) <= date <= dt_date(2025, 8, 10): timetable = {1: "K", 2: "K", 3: "K", 4: "K", 5: "K", 6: "L", 7: "S"}.get(date.isoweekday(), "")
+    else: timetable = {1: "P", 2: "T", 3: "T", 4: "T", 5: "P", 6: "L", 7: "S"}.get(date.isoweekday(), "")
     date = date.strftime("%d.%m.%y")
     timetable = next((item[1] for item in specials if item[0] == date), timetable)
     try:
