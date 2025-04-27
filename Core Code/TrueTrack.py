@@ -58,7 +58,7 @@ def check_friends(filtered_vehicles):
                         friends[vehicle_number] = other_vehicle_number
                     taken.append(vehicle_number)
                     taken.append(other_vehicle_number)                    
-                if track == other_track:
+                elif track == other_track:
                     if (current == other_current or (current == other_next and next == "") or (next == other_current and other_next == "")) and dep == other_dep:
                         eta = 0 if eta == "" else int(eta)
                         other_eta = 0 if other_eta == "" else int(other_eta)
@@ -306,8 +306,6 @@ def on_message(client, userdata, message):
             else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
 
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
-            if car==215:
-                vehicles[219] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
     #print(runtime.total_seconds())
