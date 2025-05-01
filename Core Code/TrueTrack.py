@@ -1,4 +1,4 @@
-# TrueTrack v12 (15.4.25)
+# TrueTrack v12.2 (1.5.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
