@@ -1,4 +1,4 @@
-# TrueTrack v12.2 (1.5.25)
+# TrueTrack v12.3 (3.5.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -294,11 +294,11 @@ def on_message(client, userdata, message):
                     if vuoro=='Unknown': vuoro = f"{found_vuoro}x"
         except Exception as e: print(f" JSON fetch error: {e}")
         # Check if dep_time is within the past 2 hours
-        dep_time = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone("Europe/Helsinki"))
-        current_time = datetime.now(timezone("Europe/London")).replace(second=0, microsecond=0)
-        a=1
-        #if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
-        if a==1:
+        helsinki = timezone("Europe/Helsinki")
+        current_time = datetime.now(helsinki).replace(second=0, microsecond=0)
+        dep_time_naive = datetime.strptime(f"{day} {dep}", "%Y-%m-%d %H:%M")
+        dep_time = helsinki.localize(dep_time_naive)
+        if (current_time - timedelta(minutes=130)) <= dep_time <= (current_time + timedelta(minutes=30)):
             if car in last_etas:
                 if last_etas[car] == eta and car in vehicles:
                     eta = vehicles[car][2] # If ETA hasn't changed, get it from the vehicles dict
@@ -306,6 +306,8 @@ def on_message(client, userdata, message):
             else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
 
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
+            if car == 155:
+                vehicles[141] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
     #print(runtime.total_seconds())
