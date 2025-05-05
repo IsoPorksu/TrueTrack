@@ -32,7 +32,7 @@ m2as = [("04:57", "T"), ("04:57", "P"), ("17:12", "T"), ("17:13", "P"), ("21:00"
         ("05:49", "S"), ("18:59", "S"), ("19:29", "S"), ("19:49", "S"), ("19:59", "S")]
 
 # Destinations
-destinations = {("M1", 1): "VS", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M2", 2): "    TAP"}
+destinations = {("M1", 1): "PT", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M2", 2): "    TAP"}
 
 ##############################################  
 
@@ -231,7 +231,6 @@ async def print_vehicle_table():
         print(" ALL TRAFFIC IS STOPPED")
     if sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) == 0 and runtime.total_seconds() > 5: print(" All trains are currently in bed")
     
-
 async def update_vehicle_table():
     while True:
         await print_vehicle_table()
