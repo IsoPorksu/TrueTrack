@@ -1,4 +1,4 @@
-# TrueTrack v12.3 (3.5.25)
+# TrueTrack v13 (14.5.25)
 import json, time, textwrap, platform, requests, paho.mqtt.client as mqtt
 from os import system
 from math import *
@@ -25,11 +25,11 @@ else:
 coordinates = {tuple(coordinate): tuple(values) for coordinate, values in coords}
 
 # Service times (M2)
-m2as = [("04:57", "T"), ("04:57", "P"), ("17:12", "T"), ("17:13", "P"), ("21:00", "T"),
+"""m2as = [("04:57", "T"), ("04:57", "P"), ("17:12", "T"), ("17:13", "P"), ("21:00", "T"),
         ("21:00", "P"), ("04:49", "L"), ("05:04", "L"), ("05:19", "L"), ("05:34", "L"),
         ("05:46", "L"), ("06:01", "L"), ("05:33", "L"), ("05:48", "L"), ("06:03", "L"),
         ("06:18", "L"), ("06:33", "L"), ("06:48", "L"), ("07:03", "L"), ("05:49", "L"),
-        ("05:49", "S"), ("18:59", "S"), ("19:29", "S"), ("19:49", "S"), ("19:59", "S")]
+        ("05:49", "S"), ("18:59", "S"), ("19:29", "S"), ("19:49", "S"), ("19:59", "S")]"""
 
 # Destinations
 destinations = {("M1", 1): "PT", ("M1", 2): "       KIL", ("M2", 1): "  MM", ("M2", 2): "    TAP"}
@@ -49,11 +49,11 @@ def check_friends(filtered_vehicles):
                     eta = 0 if eta == "" else int(eta)
                     other_eta = 0 if other_eta == "" else int(other_eta)
                     if eta < other_eta:
-                        vehicles[other_vehicle_number] = current, next, eta, track, dest, speed, dep, other_seq, vuoro
+                        vehicles[other_vehicle_number] = current, next, eta, track, dest, speed, dep, 2, vuoro
                         friends[other_vehicle_number] = vehicle_number
                         friends[vehicle_number] = other_vehicle_number
                     else:
-                        vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed, other_dep, seq, other_vuoro
+                        vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed, other_dep, 1, other_vuoro
                         friends[other_vehicle_number] = vehicle_number
                         friends[vehicle_number] = other_vehicle_number
                     taken.append(vehicle_number)
@@ -63,11 +63,11 @@ def check_friends(filtered_vehicles):
                         eta = 0 if eta == "" else int(eta)
                         other_eta = 0 if other_eta == "" else int(other_eta)
                         if eta < other_eta:
-                            vehicles[other_vehicle_number] = current, next, eta, track, dest, speed, dep, other_seq, vuoro
+                            vehicles[other_vehicle_number] = current, next, eta, track, dest, speed, dep, 2, vuoro
                             friends[other_vehicle_number] = vehicle_number
                             friends[vehicle_number] = other_vehicle_number
                         else:
-                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed, other_dep, seq, other_vuoro
+                            vehicles[vehicle_number] = other_current, other_next, other_eta, other_track, other_dest, other_speed, other_dep, 1, other_vuoro
                             friends[other_vehicle_number] = vehicle_number
                             friends[vehicle_number] = other_vehicle_number
                         taken.append(vehicle_number)
@@ -116,7 +116,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if station.endswith("1") and friend != "":
         friend = int(friend)+1
         car += 1
-    if car < 299 and seq == 1: new_car = " "+str(car)
+    if car < 299 and seq == 1: new_car = "^"+str(car)
     else: new_car = " " + str(car)
     if car in (131, 132, 320): new_car = str(new_car)+"*" # Special (motors/straphangers)
     if car in (141, 142, 179, 180): new_car = str(new_car)+"'" # Adverts
@@ -126,7 +126,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if friend in (141, 142, 179, 180): friend = str(friend)+"'"
     if friend in (135, 136): friend = str(friend)+"+"
     if friend in (155, 156): friend = str(friend)+"-"
-    if car < 299 and seq == 2: friend = " "+str(friend)
+    if car < 299 and seq == 2: friend = "^"+str(friend)
     else: friend = " " + str(friend)
     string = f"{new_car:<5}| {station:>4} "
     if next: string += f"-> {next:<5}{eta:>3}s | {destination:<11}|"
@@ -243,7 +243,6 @@ def on_message(client, userdata, message):
     data = json.loads(message.payload.decode())
     dir, line, car, vuoro, dep, seq, day, lat, lon = data.get('VP', {}).get('dir', 1), data.get('VP', {}).get('desi', 'Unknown'), data.get('VP', {}).get('veh', 'Unknown'), data.get('VP', {}).get('line', 'Unknown'), data.get('VP', {}).get('start', 'Unknown'), data.get('VP', {}).get('seq', 'Unknown'), data.get('VP', {}).get('oday', 'Unknown'), data.get('VP', {}).get('lat', 'Unknown'), data.get('VP', {}).get('long', 'Unknown'), 
     speed = str(ceil(data.get('VP', {}).get('spd', 62.5) * 3.6))
-
     #if (lat, lon) not in coordinates:
     #    print(car)
     if (lat, lon) in coordinates:
@@ -259,11 +258,11 @@ def on_message(client, userdata, message):
         #if car == 133: print(eta)
         dest_key = (line, int(dir))
         destination = destinations.get(dest_key, "")
-        if (datetime.strptime(dep, "%H:%M") > datetime.strptime("21:00", "%H:%M") and track=="2") or (datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M") and track=="1"): # if it leaves TAP after 20:15 then it will be an M2A
+        """if (datetime.strptime(dep, "%H:%M") > datetime.strptime("21:00", "%H:%M") and track=="2") or (datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M") and track=="1"): # if it leaves TAP after 20:15 then it will be an M2A
             if destination == "    TAP":
                 destination = "       KIL"
         elif (dep, timetable) in m2as and destination == "    TAP":
-            destination = "       KIL" 
+            destination = "       KIL" """
         if current not in ["KILK", "TAPG", "SVV", "KPG", "VSG", "MMG", ""]: current += track
         # Short-term dest editing during disruption
         """if current in ["KILK", "KIL1" , "ESL1", "SOU1", "KAI1", "FIN1", "MAK1", "NIK1", "URP1", "TAP1", "OTA1", "KEN1", "KOS1", "LAS1"]: destination = "    LAS"
@@ -303,6 +302,11 @@ def on_message(client, userdata, message):
                 if car in car_list and not vuoro.endswith("x"):
                     if vuoro=='Unknown': vuoro = f"{found_vuoro}x"
         except Exception as e: print(f" JSON fetch error: {e}")
+
+        # Add custom-made sequence data
+        if car in vehicles and track == vehicles[car][3]: seq = vehicles[car][7]
+        else: seq = 0 # Sequence data is now (incorrectly) the same as direction data
+
         # Check if dep_time is within the past 2 hours
         helsinki = timezone("Europe/Helsinki")
         current_time = datetime.now(helsinki).replace(second=0, microsecond=0)
