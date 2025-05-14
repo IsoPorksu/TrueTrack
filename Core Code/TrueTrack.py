@@ -129,7 +129,7 @@ def print_maker(car, station, next, eta, destination, speed, departure, seq, vuo
     if car < 299 and seq == 2: friend = " "+str(friend)
     else: friend = " " + str(friend)
     string = f"{new_car:<5}| {station:>4} "
-    if next: string += f"-> {next:<4}{eta:>4}s | {destination:<11}|"
+    if next: string += f"-> {next:<5}{eta:>3}s | {destination:<11}|"
     else: string += f"             | {destination:<11}|"
     if speed not in ["0", 0] and next:
         string += f"{friend:<5}| {speed:>2} |" if friend else f"     | {speed:>2} |"
@@ -187,7 +187,7 @@ async def print_vehicle_table():
         (range(201, 225), 'm200_count', 0.5),
         (range(301, 321), 'm300_count', 1),
         (range(321, 326), 'o300_count', 1)]
-    dest_map = {"VS": 'vs', "  MM": 'mm', "    TAP": 'tap', "       KIL": 'kil'}
+    dest_map = {"PT": 'vs', "  MM": 'mm', "    TAP": 'tap', "       KIL": 'kil'}
     current_time = datetime.now(timezone("Europe/Helsinki")).replace(second=0, microsecond=0)
     # Check if dep_time is within the past 2 hours
     for vehicle_number, data in sorted_vehicles.items():
@@ -231,6 +231,7 @@ async def print_vehicle_table():
         print(" ALL TRAFFIC IS STOPPED")
     if sum(counters[k] for k in ['m100_count', 'm200_count', 'm300_count']) == 0 and runtime.total_seconds() > 5: print(" All trains are currently in bed")
     
+
 async def update_vehicle_table():
     while True:
         await print_vehicle_table()
@@ -256,7 +257,7 @@ def on_message(client, userdata, message):
         elif current == "Pre-TAP": current = "URP" if line == "M1" else "TAPG" if line == "M2" else ""
         eta = eta_maker(pos)
         #if car == 133: print(eta)
-        dest_key = (line, int(track))
+        dest_key = (line, int(dir))
         destination = destinations.get(dest_key, "")
         if (datetime.strptime(dep, "%H:%M") > datetime.strptime("21:00", "%H:%M") and track=="2") or (datetime.strptime(dep, "%H:%M") > datetime.strptime("20:15", "%H:%M") and track=="1"): # if it leaves TAP after 20:15 then it will be an M2A
             if destination == "    TAP":
@@ -277,15 +278,25 @@ def on_message(client, userdata, message):
             elif car<300 and seq == 2: seq = 1
             pass
         a, b = current, next
-        
+        """if current=="PT2" and next =="IK2" and dir=="1":
+                if 
+                eta = 55
+                next = "PT2"
+                current = "IK1"
+                dest = "PT"
+                #print(car)"""
+                
+                
+        #if car==175: print(current,next,dir)
         if len(current) == 2: current = " " + current
         speed = min(max(int(speed), 15), 85) if int(speed) != 0 else 0
         if car in vehicles:
             if vuoro == 'Unknown': vuoro = vehicles[car][-1]
         if car in vehicles and eta != "" and vehicles[car][2] != "":
-            if int(eta) in range (int(vehicles[car][2])-1, int(vehicles[car][2])-10): # If running "bang road"
-                eta=""
+            if int(dir) != int(track): # If running "bang road"
+                eta="999"
                 current, next = next, current
+                next = next+"*"
 
         try:
             for found_vuoro, car_list in vuoro_list.items():
@@ -305,8 +316,8 @@ def on_message(client, userdata, message):
             else: last_etas[car] = eta # If it has changed, use it and reset in the last_etas dict
 
             vehicles[car] = current, next, eta, track, destination, speed, dep, seq, vuoro
-            if car == 155:
-                vehicles[141] = current, next, eta, track, destination, speed, dep, seq, vuoro
+            #if car == 155:
+              #vehicles[141] = current, next, eta, track, destination, speed, dep, seq, vuoro
 
 async def export_vuoro():
     #print(runtime.total_seconds())
